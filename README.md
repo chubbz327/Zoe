@@ -8,11 +8,16 @@ zoe-generator by the -app_file command argument.
 
 
 #INSTALL
+#make sure cpan is set to follow
+cpan> o conf prerequisites_policy follow
+cpan> o conf commit
 
+#install pre-reqs
+sudo ./prereqs.sh
 perl Makefile.PL
 make 
 make test 
-make install 
+sudo make install 
 
 
 #Running 
