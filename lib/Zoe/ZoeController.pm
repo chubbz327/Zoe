@@ -6,7 +6,6 @@ use JSON::Parse 'json_to_perl';
 use Data::Dumper;
 use Digest::SHA1 qw(sha1_hex);
 use Data::Dumper;
-use Try::Tiny;
 use Mojo::Exception;
 
 BEGIN { unshift @INC, "$FindBin::Bin/../" }
