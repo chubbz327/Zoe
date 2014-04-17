@@ -1,0 +1,126 @@
+Tutorial
+Intro
+
+When creating a web application a developer would to write:
+DDL for tables
+SQL for persistence
+Model View and Controller code
+Routes
+Write CRUD-Create Update Delete actions for controllers
+Zoe does all this for you. It aims to give a starting point ahead of these routine tasks. Zoe reads in your application configuration file and outputs a Mojolicious application. Every object defined in the configuration file has controller, model and view code generated, as well as its persistance layer; (handled by Zoe::DataObject. Relationships between objects, (One To Many, Many To Many) as are also represented via CRUD pages, (the new Employee page will also have a select drop down for Department), but foreien
+Installation
+
+Installaton steps below:
+# perl Makefile.PL 
+# make 
+# make test 
+# make install 
+# zoe daemon
+Application Description File
+
+The application configuration file is where you describe the application. This file contains the path where the generated code is to be copied, the database connection information, optional environment variables, and last but not least the object description, which contains the objects table and column information as well as its' relationship to other objects. In the example below, we describe an application with three objects:
+Employee
+Department
+Project
+For this simple example, the following relationships are created:
+Employee has one to many relationship with Department
+Employee has many to many relationship with Project
+All relationships are bi directional
+An example applicaiton description file is shown below:
+application_name: Employee
+location: /var/apps/employee
+environment_variables:
+   MOJO_MODE: development
+   MOJO_LISTEN: http://*:8889
+database:
+   type: mysql
+   dbname: testing
+   port: 3306
+   host: 127.0.0.1
+   dbuser: testing
+   dbpassword: testing
+   is_verbose: 1
+   
+objects:
+  - object: Namespace::Project
+    many_to_many: 
+     -  object: Namespace::Employee
+        table: ProjectXEmployee
+        my_column: Project_ID
+        relationship_col: Employee_ID
+        member: Employees
+        primary_key: ID
+    table: Project
+    columns:
+     -  name: ID
+        type: integer
+        constraints: 
+        primary_key: 1
+     -  name: name
+        type: text
+        constraints: "not null"
+        to_string: 1  
+     -  name: image
+        type: text
+        input_type: file
+        constraints: "not null"
+        display: |
+            return "get_image() . "'/>"; 
+  
+  
+  - object: Namespace::Employee
+    many_to_many:
+     -  object: Namespace::Project
+        table: ProjectXEmployee
+        my_column: Employee_ID
+        relationship_col: Project_ID
+        member: Projects
+        primary_key: ID
+    table: Employee
+    columns:
+     -  name: ID
+        type: integer
+        constraints:
+        primary_key: 1
+     -  name: name
+        type: text
+        constraints: "not null"
+        to_string: 1
+     -  name: Department_ID
+        type: integer
+        constraints: 
+        foreign_key: Namespace::Department
+        member: Department
+        
+  - object: Namespace::Department
+    has_many:
+     -  object: Namespace::Employee
+        key: Department_ID
+        member: Employees
+    table: Department
+    columns:
+     -  name: ID
+        type: integer
+        constraints:
+        primary_key: 1
+     -  name: name
+        type: text
+        constraints: "not null"
+        to_string: 1
+
+Generating Code
+
+Once the application description file is complete all that is left to do is generate the code; this can be accomplished by either uploading file to the Zoe web interface or by running the zoe-generator script (shown below):
+zoe-generator -verbose  Enables verbose logging
+              -no_ddl   Tables will not be created
+              -app_file Application description file
+So to generate the example:
+zoe-generator --app_file tutorial_example.yml
+This will generate the code in the directory specified by location: in the application description file. So to launch the application
+# cd /var/apps/employee/employee/script; morbo emplyee
+Point your web browser at http://your_host_name:specified_port, by default this is http://localhost:3000
+Testing
+
+The application can tested via a default test script generated in t/00.crud.t 
+This script tests create, update, and delete for all objects defined in the application description file via the object interface and http interface
+ 

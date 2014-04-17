@@ -1,0 +1,6 @@
+<div id='cart_div'>
+
+% include 'cart';
+
+
+</div>

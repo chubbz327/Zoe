@@ -1,0 +1,1 @@
+update cart.html.ep, paypal_Transaction.html.ep->set if to check cart->update_total,

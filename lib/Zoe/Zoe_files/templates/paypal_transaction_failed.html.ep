@@ -1,0 +1,16 @@
+% layout $layout;
+<h1>Sorry</h2>
+<div>
+
+We are unable to process your transaction at this time 
+
+</div>
+<script>
+    if (window.opener){
+        window.opener.location='<%= $reload_parent %>';
+        window.close();
+    } else if (top.dg.isOpen() == true){
+        window.opener.location='<%= $reload_parent %>';
+        top.dg.closeFlow();
+    }
+</script>

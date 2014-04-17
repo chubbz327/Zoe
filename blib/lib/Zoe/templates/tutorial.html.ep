@@ -1,0 +1,94 @@
+% layout 'default';
+
+<h2 id='tutorial'>Tutorial</h2>
+<h4 id='intro'>Intro</h4>
+When creating a web application a developer would to write:</br>
+<ul>
+<li>DDL for tables</li>
+<li>SQL for persistence</li>
+<li>Model View and Controller code</li>
+<li>Routes</li>
+<li>Write CRUD-Create Update Delete actions for controllers</li>
+</ul>
+
+Zoe does all this for you.  It aims to give a starting point ahead of these routine tasks.  Zoe reads in your application configuration 
+file and outputs a <a href='http://mojolicio.us/'>Mojolicious</a> application.  Every object defined in the configuration file has controller, model and view 
+code generated, as well as its persistance layer; (handled by <a href='/perldoc/Zoe/DataObject'>Zoe::DataObject</a>.  Relationships between objects,
+(One To Many, Many To Many) as are also represented via CRUD pages, (the new Employee page will also have a select drop down for Department), but foreien 
+
+<h4 id='install'>Installation</h4>
+Installaton steps below:
+<div class='well'>
+
+<code>
+#  perl Makefile.PL <br>
+#  make <br>
+#  make test <br>
+#  make install <br>
+#  zoe daemon
+ </code>
+
+</div>
+
+<h4 id='config'>Application Description File</h4>
+The application configuration file is where you describe the application.  This file contains the path where the generated code is to be copied, the database connection information, optional environment variables, and last but not least 
+the object description, which contains the objects table and column information as well as its' relationship to other objects.  In the example below, we describe an application with three objects:
+<ul>
+<li>Employee</li>
+<li>Department</li>
+<li>Project</li>
+</ul>
+For this simple example, the following relationships are created:
+<ul>
+<li>Employee has one to many relationship with Department</li>
+<li>Employee has many to many relationship with Project</li>
+<li>All relationships are bi directional </li>
+</ul>
+
+An example applicaiton description file is shown below:
+
+<div class='well'><code>
+     application_name:&nbsp;Employee<br>location:&nbsp;/var/apps/employee<br>environment_variables:<br>&nbsp;&nbsp;&nbsp;MOJO_MODE:&nbsp;development<br>&nbsp;&nbsp;&nbsp;MOJO_LISTEN:&nbsp;http://*:8889<br>database:<br>&nbsp;&nbsp;&nbsp;type:&nbsp;mysql<br>&nbsp;&nbsp;&nbsp;dbname:&nbsp;testing<br>&nbsp;&nbsp;&nbsp;port:&nbsp;3306<br>&nbsp;&nbsp;&nbsp;host:&nbsp;127.0.0.1<br>&nbsp;&nbsp;&nbsp;dbuser:&nbsp;testing<br>&nbsp;&nbsp;&nbsp;dbpassword:&nbsp;testing<br>&nbsp;&nbsp;&nbsp;is_verbose:&nbsp;1<br>&nbsp;&nbsp;&nbsp;<br>objects:<br>&nbsp;&nbsp;-&nbsp;object:&nbsp;Namespace::Project<br>&nbsp;&nbsp;&nbsp;&nbsp;many_to_many:&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;object:&nbsp;Namespace::Employee<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table:&nbsp;ProjectXEmployee<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;my_column:&nbsp;Project_ID<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;relationship_col:&nbsp;Employee_ID<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;member:&nbsp;Employees<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;primary_key:&nbsp;ID<br>&nbsp;&nbsp;&nbsp;&nbsp;table:&nbsp;Project<br>&nbsp;&nbsp;&nbsp;&nbsp;columns:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;name:&nbsp;ID<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type:&nbsp;integer<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constraints:&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;primary_key:&nbsp;1<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;name:&nbsp;name<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type:&nbsp;text<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constraints:&nbsp;"not&nbsp;null"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;to_string:&nbsp;1&nbsp;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;name:&nbsp;image<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type:&nbsp;text<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;input_type:&nbsp;file<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constraints:&nbsp;"not&nbsp;null"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;display:&nbsp;|<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return&nbsp;"<img&nbsp;width='140'&nbsp;height='140'&nbsp;class='img-rounded'&nbsp;src='"&nbsp;.&nbsp;$object->get_image()&nbsp;.&nbsp;"'/>";&nbsp;<br>&nbsp;&nbsp;<br>&nbsp;&nbsp;<br>&nbsp;&nbsp;-&nbsp;object:&nbsp;Namespace::Employee<br>&nbsp;&nbsp;&nbsp;&nbsp;many_to_many:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;object:&nbsp;Namespace::Project<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table:&nbsp;ProjectXEmployee<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;my_column:&nbsp;Employee_ID<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;relationship_col:&nbsp;Project_ID<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;member:&nbsp;Projects<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;primary_key:&nbsp;ID<br>&nbsp;&nbsp;&nbsp;&nbsp;table:&nbsp;Employee<br>&nbsp;&nbsp;&nbsp;&nbsp;columns:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;name:&nbsp;ID<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type:&nbsp;integer<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constraints:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;primary_key:&nbsp;1<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;name:&nbsp;name<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type:&nbsp;text<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constraints:&nbsp;"not&nbsp;null"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;to_string:&nbsp;1<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;name:&nbsp;Department_ID<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type:&nbsp;integer<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constraints:&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;foreign_key:&nbsp;Namespace::Department<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;member:&nbsp;Department<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>&nbsp;&nbsp;-&nbsp;object:&nbsp;Namespace::Department<br>&nbsp;&nbsp;&nbsp;&nbsp;has_many:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;object:&nbsp;Namespace::Employee<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;key:&nbsp;Department_ID<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;member:&nbsp;Employees<br>&nbsp;&nbsp;&nbsp;&nbsp;table:&nbsp;Department<br>&nbsp;&nbsp;&nbsp;&nbsp;columns:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;name:&nbsp;ID<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type:&nbsp;integer<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constraints:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;primary_key:&nbsp;1<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;name:&nbsp;name<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type:&nbsp;text<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constraints:&nbsp;"not&nbsp;null"<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;to_string:&nbsp;1<br><br>
+     
+        </code>
+        
+        </div>
+<h4 id='generate'>Generating Code</h4>
+
+Once the application description file is complete all that is left to do is generate the code;  this can be accomplished by either uploading 
+file to the Zoe web interface or  by running the zoe-generator script (shown below):
+
+<div class='well'>
+<code> 
+
+zoe-generator&nbsp;-verbose&nbsp;&nbsp;Enables&nbsp;verbose&nbsp;logging<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-no_ddl&nbsp;&nbsp;&nbsp;Tables&nbsp;will&nbsp;not&nbsp;be&nbsp;created<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-app_file&nbsp;Application&nbsp;description&nbsp;file<br>
+ </code>
+</div>
+
+So to generate the example:
+
+<div class='well'>
+<code> 
+zoe-generator --app_file tutorial_example.yml
+</code>
+</div>
+
+This will generate the code in the directory specified by <code>location:</code> in the application description file. So to launch the application<br>
+
+<div class='well'>
+<code> # cd /var/apps/employee/employee/script; morbo emplyee</code>
+
+</div>
+
+Point your web browser at http://your_host_name:specified_port, by default this is http://localhost:3000
+
+<h4 id='testing'>Testing </h4>
+
+The application can tested via a default test script generated in t/00.crud.t <br>
+This script tests create, update, and delete for all objects defined in the application description file
+ via the object interface and http interface
+<p>&nbsp;
+<p>&nbsp;
+<p>&nbsp;
+
+

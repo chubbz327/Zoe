@@ -1,0 +1,74 @@
+
+% if ($layout ) {
+%   layout ($layout);
+% }
+
+<div id='cart_div'>
+% if ($cart->update_total ) { 
+   <h4 class='shopping_cart_heading'>Shopping Cart</h4>
+   
+   <!-- Empty cart -->
+   <button class ='btn btn-link' id='remove_cart' onclick= '$("#cart_div").load("<%= url_for('__EMPTYCART__') %>")' >
+                  <i class="icon-trash"></i> 
+                  Remove
+               </button>
+               
+               
+   <table class='table table-striped'>
+      <thead>
+         <tr>
+            <th>Item Number</th>
+            <th>Title</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Remove</th>
+         </tr> 
+      </thead>
+      <tbody>
+%   my %cartItems =  ();
+%   %cartItems = %{ $cart->CartItems };
+%   foreach my $index ( sort( keys( %cartItems ) ) ) {
+         <tr>
+%       my $cartItem = $cartItems{$index };
+            <td> <%= $cartItem->index %> </td>
+            <td> <%= $cartItem->title %> </td>
+            <td> <%= $cartItem->price %> </td>   
+%       my $update_url = url_with('__UPDATECARTITEMQUANTITY__')->query([cart_item_index=>$cartItem->index, updating_cart_view=>1]);
+            <td> 
+               <input id='cart_item_<%= $cartItem->index %>' type='text' value="<%= $cartItem->quantity %>" />  
+               <button class='btn btn-success' id='cart_item_<%=$cartItem->index %>_button' >Update</button>       
+               <script> 
+                  $("#cart_item_<%= $cartItem->index %>_button").on('click', function () {
+                     var $quantity = $("#cart_item_<%= $cartItem->index %>").val();
+                     var $my_url   = '<%= $update_url %>&cart_item_quantity=' +$quantity;                    
+                     //alert($my_url);
+                     $("#cart_div").load($my_url, 
+                        function ( response, status, req) {
+                           $("#cart_container").fadeOut();
+                           $("#cart_container").fadeIn();
+                           $("#cart_container").html($response);                       
+                        }
+                      );                  
+                  });       
+                  </script>               
+            </td>   
+%       my $url = url_with('__REMOVEFROMCART__')->query([cart_item_index=>$cartItem->index, updating_cart_view=>1]);
+            <td> 
+               <button class ='btn btn-link' id='remove_from_cart' onclick= '$("#cart_div").load("<%= $url %>")' >
+                  <i class="icon-trash"></i> 
+                  Remove
+               </button>
+            </td>
+         </tr>
+%   }
+%   if($cart->update_total ) {
+         <tr>
+            <td><em>Sub Total</em><td colspan='4' style=' text-align: right;'><em> <%= $cart->update_total() %> </em></td>
+         </tr>
+%   }
+      <tbody>
+   </table>
+
+% }
+</div>
+

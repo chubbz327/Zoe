@@ -1,0 +1,73 @@
+application_name: Testing
+location: /var/apps/testing_home
+database:
+  type: sqlite
+  dbfile: /var/apps/testing_home/app.db
+  is_verbose: 1
+objects:
+  - object: BFTG::DO::TestObject3
+    many_to_many: 
+     -  object: BFTG::DO::TestObject2
+        table: TestObject2XTestObject3
+        my_column: TestObject3_ID
+        relationship_col: TestObject2_ID
+        member: TestObject2_LIST
+        primary_key: ID
+    table: TestObject3
+    columns:
+     -  name: ID
+        type: integer
+        constraints: 
+        primary_key: 1
+     -  name: name
+        type: text
+        constraints: "not null"
+        to_string: 1  
+     -  name: image
+        type: text
+        input_type: file
+        constraints: "not null"
+        display: |
+            return "<img width='140' height='140' class='img-rounded' src='" . $object->get_image() . "'/>"; 
+  
+		
+  - object: BFTG::DO::TestObject2
+    many_to_many:
+     -  object: BFTG::DO::TestObject3
+        table: TestObject2XTestObject3
+        my_column: TestObject2_ID
+        relationship_col: TestObject3_ID
+        member: TestObject3_LIST
+        primary_key: ID
+    table: TestObject2
+    columns:
+     -  name: ID
+        type: integer
+        constraints:
+        primary_key: 1
+     -  name: name
+        type: text
+        constraints: "not null"
+        to_string: 1
+     -  name: TestObject1_ID
+        type: integer
+        constraints: 
+        foreign_key: BFTG::DO::TestObject1
+        member: TestObject1
+        
+  - object: BFTG::DO::TestObject1
+    has_many:
+     -  object: BFTG::DO::TestObject2
+        key: TestObject1_ID
+        member: TestObject2_LIST
+    table: TestObject1
+    columns:
+     -  name: ID
+        type: integer
+        constraints:
+        primary_key: 1
+     -  name: name
+        type: text
+        constraints: "not null"
+        to_string: 1
+

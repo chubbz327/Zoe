@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+  <head><title><%= title %></title>
+  
+  <script src="/assets/js/jquery.js"></script>
+	 <script src="/assets/js/jquery.validate.js"></script>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+	    <!-- Le styles -->
+    <link href="../assets/css/bootstrap.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+      
+      .zside-navi {
+        position: fixed; 
+       
+      }
+      
+      
+    </style>
+    <link href="/assets/css/bootstrap-responsive.css" rel="stylesheet">
+	 <link href="/assets/css/bootstrap.css" rel="stylesheet">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="../assets/js/html5shiv.js"></script>
+    <![endif]-->
+
+    <!-- Fav and touch icons -->
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
+      <link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
+                    <link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png">
+                                   <link rel="shortcut icon" href="../assets/ico/favicon.png">
+  
+  </head>
+  <body>
+    <body  data-spy="scroll" >
+  
+  <div class="navbar navbar-fixed-top">
+  <div class="navbar-inner">
+    <div class="container-fluid">
+
+      <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+        <span class="icon-bar">&nbsp; </span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </a>
+      
+      <a class="navbar-brand" href="/#">Zoe</a> 
+       
+
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="row-fluid">
+    <div class="span3 sidebar-nav " >
+      <!--Sidebar content-->
+	  
+	   <ul class="nav nav-list zside-navi"  data-spy="affix" >
+	   <h4>&nbsp;&nbsp; Docs</h4>
+	   <li>
+            <a href='/'>
+              <i class='icon-chevron-right'></i> 
+              Upload Application Description
+            </a>
+          </li>
+          <li>
+            <a href='/tutorial'>
+              <i class='icon-chevron-right'></i> 
+              Tutorial
+            </a>
+            <ul>
+              <li>
+                <a href='/tutorial#intro'>
+                <i class='icon-chevron-right'></i> 
+                  Intro
+                </a>
+              </li>
+              <li>
+                <a href='/tutorial#install'>
+                <i class='icon-chevron-right'></i> 
+                  Install
+                </a>
+              </li>
+              <li>
+                <a href='/tutorial#config'>
+                <i class='icon-chevron-right'></i> 
+                  Application Description
+                </a>
+              </li>
+              <li>
+                <a href='/tutorial#generate'>
+                <i class='icon-chevron-right'></i> 
+                  Generating Code
+                </a>
+              </li>
+              <li>
+                <a href='/tutorial#testing'>
+                <i class='icon-chevron-right'></i> 
+                  Test Script
+                </a>
+              </li>
+              
+            </ul>
+          </li>
+          <li>
+            <a href='/perldoc/Zoe'>
+              <i class='icon-chevron-right'></i> 
+              Zoe Generator
+            </a>
+          </li>
+          <li>
+            <a href='/perldoc/Zoe/DataObject'>
+              <i class='icon-chevron-right'></i>
+               Zoe::DataObject
+            </a>
+          </li>
+          <li>
+            <a href='/perldoc/Zoe/Helpers'>
+              <i class='icon-chevron-right'></i> 
+              Zoe::Helpers 
+            </a>
+          </li>
+        </ul>
+    </div>
+
+    <div class="span9">
+    
+
+  <%= content %>
+     </div></div> 
+  
+  
+     <!-- ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/assets/js/bootstrap-transition.js"></script>
+    <script src="/assets/js/bootstrap-alert.js"></script>
+    <script src="/assets/js/bootstrap-modal.js"></script>
+    <script src="/assets/js/bootstrap-dropdown.js"></script>
+    <script src="/assets/js/bootstrap-scrollspy.js"></script>
+    <script src="/assets/js/bootstrap-tab.js"></script>
+    <script src="/assets/js/bootstrap-tooltip.js"></script>
+    <script src="/assets/js/bootstrap-popover.js"></script>
+    <script src="/assets/js/bootstrap-button.js"></script>
+    <script src="/assets/js/bootstrap-collapse.js"></script>
+    <script src="/assets/js/bootstrap-carousel.js"></script>
+    <script src="/assets/js/bootstrap-typeahead.js"></script>  
+  
+  </body>
+  
+  
+</html>
