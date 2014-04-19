@@ -50,4 +50,4 @@ runtests( ["$generated_test"]);
   
 #remove_tree("$app_location");
   
-unlink($file);
+#unlink($file);

@@ -12,7 +12,6 @@ use FindBin;
 use YAML::Tiny;
 use strict;
 use warnings;
-our $VERSION = '0.3';
 
 my $singleton;
 my $DBTYPE = undef;
@@ -1264,9 +1263,7 @@ __DATA__
 
 Zoe::DataObject - Relational mapper
 
-=head1 VERSION
 
-This documentation refers to Zoe::DataObject version 0.0.2.
 
 =head1 SYNOPSIS
 

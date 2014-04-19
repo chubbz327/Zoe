@@ -6,7 +6,6 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Lingua::EN::Inflect qw ( PL );
 use List::MoreUtils qw{any};
 use Mojo::Util qw (xml_escape);
-our $VERSION = '0.2';
 
 use vars qw (
 		%args	
@@ -585,9 +584,7 @@ __DATA__
 
 Zoe::Helpers - Provides helper methods that genrate html for Zoee::DataObjects
 
-=head1 VERSION
 
-This documentation refers to ZOE::Helpers version 0.1
 
 =head1 SYNOPSIS
 

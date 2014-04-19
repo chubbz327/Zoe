@@ -23,6 +23,7 @@ use String::CamelCase qw(decamelize);
 use Log::Message::Simple qw[msg error debug
   carp croak cluck confess];
 use Mojo::Asset::File;
+use Hash::Merge;
 our $VERSION = '0.52';
 my (
     $application_config_file, #yaml config file for app
@@ -177,17 +178,22 @@ sub zoe_init {
     
     #$application_description_string = $arg{application_description};
     @application_files = @{  $arg{application_config_file} };
+    
 
     unless ($application_description) {
        foreach my $file  (@application_files){
             my $config  = YAML::Tiny->read($file)
               or croak " YAML Parse error in $application_config_file"
               . YAML::Tiny->errstr;
-              %tmp_hash = ( %tmp_hash, %{   $config->[0] } ) ;
+              my  $tmp_ref;
+              $tmp_ref  = Hash::Merge->new('RETAINMENT_PRECEDENT')->merge (  $config->[0], \%tmp_hash   ) ;
+              
+              %tmp_hash = %$tmp_ref;
           }    
     }
     
     $application_description->[0] = \%tmp_hash;
+   
 
     #Set application name
     $application_name = $application_description->[0]->{application_name};
