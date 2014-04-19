@@ -87,7 +87,7 @@ sub startup {
             my $file_path     = file( $tmp_dir, $filename );
             $uploaded_file->move_to($file_path);
             Zoe->new()->generate_application(
-                application_config_file => "$file_path",
+                application_config_file => ["$file_path"],
                 is_verbose              => 1
             );
             my $message =
@@ -166,19 +166,28 @@ sub generate_db_yml {
 sub zoe_init {
     my $self = shift;
     my %arg  = @_;
+    my @application_files;
+    my %tmp_hash; 
+    
     $ZOE_HOME                = dir( catdir( dirname(__FILE__) ) );
     $ZOE_FILES               = dir( $ZOE_HOME, 'Zoe', 'Zoe_files' );
     $no_ddl                  = $arg{no_ddl};
     $do_replace_existing     = $arg{replace};
     $is_verbose              = $arg{is_verbose};
-    $application_description = $arg{application_description};
+    
+    #$application_description_string = $arg{application_description};
+    @application_files = @{  $arg{application_config_file} };
 
     unless ($application_description) {
-        $application_config_file = $arg{application_config_file};
-        $application_description = YAML::Tiny->read($application_config_file)
-          or croak " YAML Parse error in $application_config_file"
-          . YAML::Tiny->errstr;
+       foreach my $file  (@application_files){
+            my $config  = YAML::Tiny->read($file)
+              or croak " YAML Parse error in $application_config_file"
+              . YAML::Tiny->errstr;
+              %tmp_hash = ( %tmp_hash, %{   $config->[0] } ) ;
+          }    
     }
+    
+    $application_description->[0] = \%tmp_hash;
 
     #Set application name
     $application_name = $application_description->[0]->{application_name};

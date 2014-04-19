@@ -23,7 +23,7 @@ BEGIN {
     use_ok('Zoe::DataObject');
 }
 
-my $t = Test::Mojo->new('Zoe');
+my $t = Test::Mojo->new('Zoe') or die 'Could not start Zoe';
 $t->app->log->level('debug');
 $t->get_ok('/')->status_is(200)->content_like(qr/Zoe/i);
 
@@ -48,6 +48,6 @@ my $generated_test = file($app_location, 'employee' , 't', '00.crud.t');
  use Test::Harness;
 runtests( ["$generated_test"]);
   
-remove_tree("$app_location");
+#remove_tree("$app_location");
   
 unlink($file);

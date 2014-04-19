@@ -14,22 +14,24 @@ BEGIN {
 use Zoe;
 use Getopt::Long;
 
-my ($is_verbose, $application_config_file, $no_ddl, $do_replace_existing ) = undef;
+my ($is_verbose, @application_config_files, $no_ddl, $do_replace_existing ) = undef;
 
 GetOptions(
     'verbose!'   => \$is_verbose,
     'no_ddl!'    => \$no_ddl,
-    'app_file=s' => \$application_config_file,
+    'app_file=s' => \@application_config_files,
     'replace'    => \$do_replace_existing,
 );
 
-_usage() unless ($application_config_file);
+_usage() unless (@application_config_files);
 
-croak
-  "Could not read application description file: $application_config_file"
-  unless ( -e $application_config_file );
+foreach my $application_config_file ( @application_config_files) {
+    croak
+        "Could not read application description file: $application_config_file"
+    unless ( -e $application_config_file );
+}
 
-Zoe->new->generate_application( application_config_file => $application_config_file, 
+Zoe->new->generate_application( application_config_file => \@application_config_files, 
           no_ddl => $no_ddl,
           is_verbose => $is_verbose,  
           replace => $do_replace_existing,
@@ -40,7 +42,7 @@ sub _usage {
     my $usage = <<"USAGE";
 zoe-generator -verbose	Enables verbose logging
               -no_ddl	Tables will not be created
-              -app_file	Application description file
+              -app_file	One for each application description file 
               -replace  Replace existing controllers and views 
 		 
 USAGE
