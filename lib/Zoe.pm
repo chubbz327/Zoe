@@ -355,6 +355,27 @@ qq^post_data('$post_url' . $variable_name->get_primary_key_value, $variable_name
     write_file( "$test_file", $test_code ) or croak "Could not open $test_file";
     return;
 }
+
+############################################
+# Usage      : private
+# Purpose    : Copies fragments used by Zoe::Helpers
+# Returns    : n/a
+# Parameters : n/a
+# Throws     : no exceptions
+# Comments   : none
+# See Also   : n/a
+sub _copy_fragments {  
+    my $from = dir( $ZOE_FILES, 'templates','fragments');
+    my $to = dir($application_location, 'templates', 'fragments' );
+    dircopy( 
+        "$from", 
+        "$to",
+      )
+      or die
+      "Could not copy fragments directory\n$!";
+      
+      print "$from $to DIR COPUY FRAGMENTS\n";
+}
 ############################################
 # Usage      : private
 # Purpose    : Writes the layout file for
@@ -579,6 +600,7 @@ sub generate_mvc {
     _write_views( \@objects );
     _write_layout( \@objects, $url_prefix );
     _write_tests( \@objects, $url_prefix );
+    _copy_fragments();
 
     #Authorization
     my $is_auth_object = 0;
@@ -717,7 +739,9 @@ sub generate_mvc {
             if ( $column->{to_string} ) {
                 $to_string_member = $column->{name};
             }
-            if ( $column->{searchable} ) {
+            if (    ( ! defined($column->{searchable}) ) ||
+                    ( $column->{searchable} == 1 )
+             ) {
                 $searchable_columns_string .= "'$column->{name}', ";
             }
             $column_names .= $column->{name} . " ";
@@ -764,7 +788,7 @@ sub generate_mvc {
                   "'$column->{name}' => q^$column->{display}^,\n";
             }
             if (   ( defined( $column->{constraints} ) )
-                && ( $column->{constraints} =~ /not\snull/mx ) )
+                && ( $column->{constraints} =~ /not\s+null/imx ) )
             {
                 $is_required_column_string .= "'$column->{name}' => 1 , \n";
             }
@@ -1180,8 +1204,8 @@ sub _write_views {
             $password_member = $application_description->[0]->{authorization}->{config}->{data_object}->{password_member};
           
         }else {
-           $create_template = 'show_create_view.tpl';
-           $edit_template = 'show_edit_view.tpl';  
+           $create_template = 'model_create_edit_view.tpl';
+           $edit_template = $create_template; 
            #print Dumper $application_description->[0]->{authorization};        exit;
         } 
         
@@ -1192,7 +1216,7 @@ sub _write_views {
           
         $show_edit =~ s/\#__OBJECTSHORTNAME__/$object_name_short/gmx;
         my $update_name = lc( $object_name_short . '_update' );
-        $show_edit =~ s/\#__UPDATEURL__/$update_name/gmx;
+        $show_edit =~ s/\#__URL__/$update_name/gmx;
         my $show_edit_file = file( $template_dir, 'show_edit.html.ep' );
         if ( ( -e $show_edit_file ) && ( !$do_replace_existing ) ) {
             msg( "View $show_edit_file exists -- specify -replace to overwrite",
@@ -1213,7 +1237,7 @@ sub _write_views {
             
           
         my $create_name = lc( $object_name_short . '_create' );
-        $show_create =~ s/\#__CREATEURL__/$create_name/gmx;
+        $show_create =~ s/\#__URL__/$create_name/gmx;
         $show_create =~ s/\#__OBJECTSHORTNAME__/$object_name_short/gmx;
         my $show_create_file = file( $template_dir, 'show_create.html.ep' );
         if ( ( -e $show_create_file ) && ( !$do_replace_existing ) ) {
