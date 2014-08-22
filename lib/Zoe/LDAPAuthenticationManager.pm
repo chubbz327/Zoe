@@ -122,6 +122,7 @@ sub do_check {
     foreach my $group_for_role (@groups_for_role) {
 
         my $role_name = $group_for_role->{role_name};
+        next unless ( defined( $group_for_role->{member_of}) );
         my @member_of = @{ $group_for_role->{member_of} };
         if ( any { $_ =~ /\*/ } @member_of ) {
             debug( __PACKAGE__ . ": added role $role_name matches * ",

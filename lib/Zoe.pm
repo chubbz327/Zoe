@@ -24,6 +24,11 @@ use Log::Message::Simple qw[msg error debug
   carp croak cluck confess];
 use Mojo::Asset::File;
 use Hash::Merge;
+use Zoe::Runtime;
+use YAML::XS;
+
+use Mojo::Template;
+
 our $VERSION = '0.52';
 my (
     $application_config_file, #yaml config file for app
@@ -38,16 +43,20 @@ my (
     $application_home,        #parent dir
     $ZOE_HOME,                #home directory in which Zoe is installed
     $ZOE_FILES,               # zoe template files
+    $runtime,                 #application runtime, 
+    $mojolicious_template,
 );
 
-BEGIN {
+BEGIN
+{
     unshift @INC, "" . dir( catdir( dirname(__FILE__), 'Zoe' ) );
 }
 use Zoe::ObjectMeta;
 use Zoe::DataObject;
 
 # This method will run once at server start
-sub startup {
+sub startup
+{
     my $self = shift;
     $ENV{MOJO_LISTEN} = 'http://*:3456';
 
@@ -88,16 +97,14 @@ sub startup {
             my $file_path     = file( $tmp_dir, $filename );
             $uploaded_file->move_to($file_path);
             Zoe->new()->generate_application(
-                application_config_file => ["$file_path"],
-                is_verbose              => 1
-            );
+                                      application_config_file => ["$file_path"],
+                                      is_verbose              => 1 );
             my $message =
 "$application_name has been succssfully created in $application_home";
             $self->render( message => $message, template => 'upload' );
         }
     );
 }
-
 ############################################
 # Usage      : public
 # Purpose    : Method used to coordinate application generation
@@ -106,12 +113,28 @@ sub startup {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub generate_application {
+sub generate_application
+{
     my $self = shift;
     $self->zoe_init(@_);
     $self->generate_mojo_app();
     $self->generate_db_yml();
     $self->generate_mvc();
+
+    #create runtime.yml
+
+    my $runtime_yml = file( $application_location, 'config', "runtime.yml" );
+    if ( -e $runtime_yml )
+    {
+        msg( "Overiting existing $runtime_yml", $is_verbose );
+    }
+    else
+    {
+        msg( "Creating $runtime_yml", $is_verbose );
+    }
+    my $runtime_string = YAML::XS::DumpFile($runtime_yml,$runtime ) or die "$!";
+    #print Dumper $runtime;
+    #write_file( "$runtime_yml", $runtime_string ) or croak "Could not create runtime file $runtime_yml";
     print "VERSION " . $VERSION . "\n";
 }
 ############################################
@@ -124,7 +147,8 @@ sub generate_application {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub generate_db_yml {
+sub generate_db_yml
+{
 
     # database config file stored temporarily in ../config
     my $db_yml_tmp = file( './', 'db.yml' );
@@ -137,7 +161,8 @@ sub generate_db_yml {
     my $db_file_content = {};
     $db_file_content->{database} = $application_description->[0]->{database};
     my $db_type = $db_file_content->{database}->{type};
-    if ( $db_type =~ /sqlite/ ) {
+    if ( $db_type =~ /sqlite/ )
+    {
         my $db_file = $db_file_content->{database}->{dbfile};
         my $toucher = File::Touch->new();
         $toucher->touch($db_file);
@@ -164,39 +189,46 @@ sub generate_db_yml {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub zoe_init {
+sub zoe_init
+{
     my $self = shift;
     my %arg  = @_;
     my @application_files;
-    my %tmp_hash; 
-    
-    $ZOE_HOME                = dir( catdir( dirname(__FILE__) ) );
-    $ZOE_FILES               = dir( $ZOE_HOME, 'Zoe', 'Zoe_files' );
-    $no_ddl                  = $arg{no_ddl};
-    $do_replace_existing     = $arg{replace};
-    $is_verbose              = $arg{is_verbose};
-    
-    #$application_description_string = $arg{application_description};
-    @application_files = @{  $arg{application_config_file} };
-    
+    my %tmp_hash;
+    $ZOE_HOME            = dir( catdir( dirname(__FILE__) ) );
+    $ZOE_FILES           = dir( $ZOE_HOME, 'Zoe', 'Zoe_files' );
+    $no_ddl              = $arg{no_ddl};
+    $do_replace_existing = $arg{replace};
+    $is_verbose          = $arg{is_verbose};
 
-    unless ($application_description) {
-       foreach my $file  (@application_files){
-            my $config  = YAML::Tiny->read($file)
+    #$application_description_string = $arg{application_description};
+    @application_files = @{ $arg{application_config_file} };
+    unless ($application_description)
+    {
+        foreach my $file (@application_files)
+        {
+            my $config = YAML::XS::LoadFile($file)
               or croak " YAML Parse error in $application_config_file"
               . YAML::Tiny->errstr;
-              my  $tmp_ref;
-              $tmp_ref  = Hash::Merge->new('RETAINMENT_PRECEDENT')->merge (  $config->[0], \%tmp_hash   ) ;
-              
-              %tmp_hash = %$tmp_ref;
-          }    
+              #print Dumper $config;
+            my $tmp_ref;
+            $tmp_ref =
+              Hash::Merge->new('RETAINMENT_PRECEDENT')
+              ->merge( $config, \%tmp_hash ) if (%tmp_hash);
+            if ($tmp_ref){
+                %tmp_hash = %$tmp_ref;
+            }else {
+                print Dumper $config;
+                %tmp_hash = %$config;
+            }
+            
+        }
     }
-    
     $application_description->[0] = \%tmp_hash;
-   
 
     #Set application name
-    $application_name = $application_description->[0]->{application_name};
+    $application_name =
+      $application_description->[0]->{serverstartup}->{application_name};
     my $application_name_LC = $application_name;
     $application_name_LC = lc( decamelize($application_name) );
 
@@ -204,22 +236,36 @@ sub zoe_init {
     $application_name =~ s/\s/_/gmx;
 
     #Set application location
-    $application_location = $application_description->[0]->{location};
-
-    if ( -d $application_description->[0]->{location} ) {
-        msg( 'Path: ' . $application_description->[0]->{location} . ': exists',
-            $is_verbose );
-    }
-    else {
+    $application_home =
+      $application_description->[0]->{serverstartup}->{location};
+    if ( -d $application_description->[0]->{serverstartup}->{location} )
+    {
+        msg(
+             'Path: '
+               . $application_description->[0]->{serverstartup}->{location}
+               . ': exists',
+             $is_verbose
+        );
+    } else
+    {
         make_path( $application_description->[0]->{location} );
-        msg( 'Path: ' . $application_description->[0]->{location} . ': created',
-            $is_verbose );
+        msg(
+             'Path: '
+               . $application_description->[0]->{serverstartup}->{location}
+               . ': created',
+             $is_verbose
+        );
     }
-    $application_home = $application_location;
     $application_location =
-      $application_description->[0]->{location} . '/' . $application_name_LC;
+        $application_description->[0]->{serverstartup}->{location} . '/'
+      . $application_name_LC;
     msg( "Generating $application_name $application_location", 1 );
 
+    #create the Application RunTime
+    $runtime = Zoe::Runtime->new( %{ $application_description->[0] } );
+
+    # create mojolicious template 
+    $mojolicious_template = Mojo::Template->new;
     return;
 }
 ############################################
@@ -230,7 +276,8 @@ sub zoe_init {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub _write_tests {
+sub _write_tests
+{
     my ($objects_ref) = shift;
     my $url_prefix            = shift || '';
     my $test_use_list_string  = '';
@@ -253,8 +300,8 @@ sub _write_tests {
     my $test_code = read_file( file( $ZOE_FILES, 't', '00-data-scaffold.t' ) );
 
     #my $test_number = scalar (@objects_meta);
-
-    foreach my $object (@objects_meta) {
+    foreach my $object (@objects_meta)
+    {
         my $object_name       = $object->{object};
         my $object_name_short = $object_name;
         my $web_updated_code  = '';
@@ -265,18 +312,18 @@ sub _write_tests {
         $save_test_code .=
 qq^ ok($variable_name->get_primary_key_value, '$object_name save');\n^;
         $create_new = qq^ my $variable_name = $object_name->new (^;
-        
-        
-        foreach my $column ( @{ $object->{columns} } ) {
+
+        foreach my $column ( @{ $object->{columns} } )
+        {
             my $member = $column->{member} || $column->{name};
 
             #unless primary key or foreign key value
-            unless ( ( defined( $column->{primary_key} ) )
-                || ( defined( $column->{foreign_key} ) ) )
+            unless (    ( defined( $column->{primary_key} ) )
+                     || ( defined( $column->{foreign_key} ) ) )
             {
                 my $random_string = rand;
-                if (   ( $column->{type} =~ /date.*/i )
-                    || ( $column->{type} =~ /time.*/i ) )
+                if (    ( $column->{type} =~ /date.*/i )
+                     || ( $column->{type} =~ /time.*/i ) )
                 {
                     my $db_parser =
                       DateTime::Format::DBI->new( $do->get_database_handle() );
@@ -286,8 +333,8 @@ qq^ ok($variable_name->get_primary_key_value, '$object_name save');\n^;
                 my $column_name     = $column->{name};
                 my $variable_string = "\t$column_name => '$random_string', \n";
                 $create_new .= $variable_string;
-            }
-            elsif ( defined( $column->{foreign_key} ) ) {
+            } elsif ( defined( $column->{foreign_key} ) )
+            {
 
                 # $member      = $column->{member};
                 my $method        = 'set_' . $member;
@@ -307,7 +354,8 @@ qq^'foreign_key relationship between $object_name and $fk_type save'); ^;
 
             #write test code for object updates
             #the to_string variable will be used for update and find tests
-            if ( defined( $column->{to_string} ) ) {
+            if ( defined( $column->{to_string} ) )
+            {
                 my $random_string2 = rand() . "_UPDATED";
                 $update_test_code .=
                     qq^$variable_name->set_$member('$random_string2');\n ^
@@ -355,7 +403,6 @@ qq^post_data('$post_url' . $variable_name->get_primary_key_value, $variable_name
     write_file( "$test_file", $test_code ) or croak "Could not open $test_file";
     return;
 }
-
 ############################################
 # Usage      : private
 # Purpose    : Copies fragments used by Zoe::Helpers
@@ -364,17 +411,13 @@ qq^post_data('$post_url' . $variable_name->get_primary_key_value, $variable_name
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub _copy_fragments {  
-    my $from = dir( $ZOE_FILES, 'templates','fragments');
-    my $to = dir($application_location, 'templates', 'fragments' );
-    dircopy( 
-        "$from", 
-        "$to",
-      )
-      or die
-      "Could not copy fragments directory\n$!";
-      
-      print "$from $to DIR COPUY FRAGMENTS\n";
+sub _copy_fragments
+{
+    my $from = dir( $ZOE_FILES,            'templates', 'fragments' );
+    my $to   = dir( $application_location, 'templates', 'fragments' );
+    dircopy( "$from", "$to", )
+      or die "Could not copy fragments directory\n$!";
+    print "$from $to DIR COPUY FRAGMENTS\n";
 }
 ############################################
 # Usage      : private
@@ -385,20 +428,20 @@ sub _copy_fragments {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub _write_layout {
-
+sub _write_layout
+{
     my $layout_out =
       file( $application_location, 'templates', 'layouts', 'zoe.html.ep' );
     my $side_bar_out =
-      file( $application_location, 'templates',  'sidebar.html.ep' );
-    
+      file( $application_location, 'templates', 'sidebar.html.ep' );
     my $objects_ref = shift;
-    my $url_prefix = shift;
+    my $url_prefix  = shift;
     $url_prefix = '' unless ($url_prefix);
 
     #copy layout file
     my $layout_file = file( $ZOE_FILES, 'templates', 'default.html.ep' );
-   # my $side_bar_file = file( $ZOE_FILES, 'templates', 'default.html.ep' );
+
+    # my $side_bar_file = file( $ZOE_FILES, 'templates', 'default.html.ep' );
     my $LAYOUT = $layout_file->open
       or croak "Could not open $layout_file :$!";
     my $layout_content;
@@ -407,39 +450,46 @@ sub _write_layout {
         $layout_content = <$LAYOUT>;
     }
     $layout_content =~ s/\#__APPLICATIONNAME__/$application_name/gmx;
-    my $side_bar;
-    foreach my $object ( @{$objects_ref} ) {
-        my $object_name = $object->{object};
-        $object_name =~ s/.*\:\:(\w+)$/$1/gmx;
-        my $route_name = $url_prefix . $object_name;
-        $route_name = lc($route_name);
-        $side_bar .=
-"<li><a href='/$route_name'><i class='icon-chevron-right'></i> $object_name</a></li>";
-    }
-    # if paypal is enabled add the paypal links to the side_bar_file
-    if ( $application_description->[0]->{paypal} ) {
-        $side_bar .= 
-      "<li><a href='/__PAYPALTRANSACTION__'><i class='icon-chevron-right'></i> Paypal Transaction</a></li>";  
-    }
     
+    $layout_content =~ s/\#__URLPREFIX__/$url_prefix/gmx;
+    
+    my $side_bar_tpl = read_file( file( $ZOE_FILES, 'templates', 'side_bar.tpl' ) ) 
+        or croak "could not read side_bar.tpl ";
+    
+    my $side_bar    =   $mojolicious_template->render( $side_bar_tpl, $objects_ref, $url_prefix);
+#    foreach my $object ( @{$objects_ref} )
+#    {
+#        my $object_name = $object->{object};
+#        $object_name =~ s/.*\:\:(\w+)$/$1/gmx;
+#        my $route_name = $url_prefix . $object_name;
+#        $route_name = lc($route_name);
+#        $side_bar .=
+#"<li><a href='/$route_name'><i class='icon-chevron-right'></i> $object_name</a></li>";
+#    }
+
+    # if paypal is enabled add the paypal links to the side_bar_file
+    if ( $application_description->[0]->{paypal} )
+    {
+        $side_bar .=
+"<li><a href='/__PAYPALTRANSACTION__'><i class='icon-chevron-right'></i> Paypal Transaction</a></li>";
+    }
+
     #$layout_content =~ s/\#__SIDEBAR__/$side_bar/gmx;
     write_file( $side_bar_out, $side_bar )
       or croak "Could not write file $side_bar_out: $!";
     my $layout_dir = dir( $application_location, 'templates', 'layouts' );
-    
-    
     make_path("$layout_dir")
       or croak "Could not create $layout_dir"
       unless ( -d "$layout_dir" );
     msg( "Created $layout_dir", $is_verbose );
-
-    unless( ( ! -e $layout_out ) || ($do_replace_existing) ) {
+    unless ( ( !-e $layout_out ) || ($do_replace_existing) )
+    {
         debug( "$layout_out exists; specify --repace to overwrite", 1 );
-          #return;
-    } 
+
+        #return;
+    }
     write_file( $layout_out, $layout_content )
       or croak "Could not write file $layout_out: $!";
-
     return;
 }
 ############################################
@@ -451,9 +501,10 @@ sub _write_layout {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub generate_mojo_app {
+sub generate_mojo_app
+{
     msg( "Running: mojo generate app $application_name:\n " . "MOJO output: ",
-        $is_verbose );
+         $is_verbose );
     my $mojo_message = `mojo generate app $application_name`;
     msg( $mojo_message, $is_verbose );
     my $application_directory = decamelize($application_name);
@@ -484,10 +535,11 @@ sub generate_mojo_app {
 
     #create upload directory
     my $upload_dir = dir( $application_location, 'public', 'upload' );
-    if ( -d "$upload_dir" ) {
+    if ( -d "$upload_dir" )
+    {
         msg( "$upload_dir exists", $is_verbose );
-    }
-    else {
+    } else
+    {
         make_path("$upload_dir")
           or croak "Could not create upload path $upload_dir";
         msg( "Created $upload_dir", $is_verbose );
@@ -495,22 +547,27 @@ sub generate_mojo_app {
     return;
 }
 
-sub _get_object_meta {
+sub _get_object_meta
+{
     my $object_name = shift;
-    foreach my $object_meta (@objects_meta) {
+    foreach my $object_meta (@objects_meta)
+    {
         return $object_meta if ( $object_meta->{object} eq $object_name );
     }
 }
 
-sub _set_object_meta {
+sub _set_object_meta
+{
     my $objects_ref = shift;
-    foreach my $object ( @{$objects_ref} ) {
+    foreach my $object ( @{$objects_ref} )
+    {
         my $object_meta = Zoe::ObjectMeta->new();
         $object_meta->{object}  = $object->{object};
         $object_meta->{columns} = $object->{columns};
-        foreach my $column ( @{ $object->{columns} } ) {
+        foreach my $column ( @{ $object->{columns} } )
+        {
             if ( defined( $column->{primary_key} )
-                && ( $column->{primary_key} ) )
+                 && ( $column->{primary_key} ) )
             {
 
                 #set meta info for primary_key
@@ -518,19 +575,23 @@ sub _set_object_meta {
             }
 
             #foreignkey setup
-            if ( defined( $column->{foreign_key} ) ) {
+            if ( defined( $column->{foreign_key} ) )
+            {
 
                 #add info to meta object; increment level
                 $object_meta->{foreign_key_feilds}->{ $column->{name} } =
                   $column->{foreign_key};
                 $object_meta->{num_foreign_keys}++;
             }
-            if ( defined( $column->{to_string} ) ) {
+            if ( defined( $column->{to_string} ) )
+            {
                 $object_meta->{to_string_member} = $column->{name};
             }
         }
-        if ( defined( $object->{has_many} ) ) {
-            foreach my $has_many ( @{ $object->{has_many} } ) {
+        if ( defined( $object->{has_many} ) )
+        {
+            foreach my $has_many ( @{ $object->{has_many} } )
+            {
                 $object_meta->{has_many}->{ $has_many->{object} } =
                   $has_many->{member};
             }
@@ -538,18 +599,21 @@ sub _set_object_meta {
         ##################################################
         # set many to many relationships
         ##################################################
-        if ( defined( $object->{many_to_many} ) ) {
-            foreach my $many ( @{ $object->{many_to_many} } ) {
+        if ( defined( $object->{many_to_many} ) )
+        {
+            foreach my $many ( @{ $object->{many_to_many} } )
+            {
                 $object_meta->{many_to_many}->{ $many->{object} } =
                   $many->{member};
             }
         }
 
         #put objects with foreign_keys at end of list
-        if ( $object_meta->{num_foreign_keys} > 0 ) {
+        if ( $object_meta->{num_foreign_keys} > 0 )
+        {
             push( @objects_meta, $object_meta );
-        }
-        else {
+        } else
+        {
             unshift( @objects_meta, $object_meta );
         }
     }
@@ -564,113 +628,152 @@ sub _set_object_meta {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub generate_mvc {
+sub generate_mvc
+{
+    my @objects = @{ $application_description->[0]->{models} };
 
-    my @objects = @{ $application_description->[0]->{objects} };
     #determine if the many member should be included in create select drop down
     my $no_select = '';
-    
+
     #set the url prefix for crud pages
     my $url_prefix = '';
-    $url_prefix = $application_description->[0]->{url_prefix}
-      if ( defined( $application_description->[0]->{url_prefix} ) );
-    if ( length($url_prefix) ) {
+    $url_prefix = $application_description->[0]->{serverstartup}->{url_prefix}
+      if (
+         defined( $application_description->[0]->{serverstartup}->{url_prefix} )
+      );
+    if ( length($url_prefix) )
+    {
         $url_prefix .= '/' unless ( $url_prefix =~ /\/^/ );
     }
 
     #Set the environment variables used in generated application
     my %environment_variables = ();
-    if ( $application_description->[0]->{environment_variables} ) {
+    if ( $application_description->[0]->{serverstartup}
+         ->{environment_variables} )
+    {
         %environment_variables =
-          %{ $application_description->[0]->{environment_variables} };
+          %{ $application_description->[0]->{serverstartup}
+              ->{environment_variables} };
     }
     _write_startup_code(
-        application_name      => $application_name,
-        objects               => \@objects,
-        environment_variables => \%environment_variables,
-        url_prefix            => $url_prefix
+                         application_name      => $application_name,
+                         objects               => \@objects,
+                         environment_variables => \%environment_variables,
+                         url_prefix            => $url_prefix
     );
-
-    _write_routes(
-        objects    => \@objects,
-        url_prefix => $url_prefix
-    );
+    _write_routes( objects    => \@objects,
+                   url_prefix => $url_prefix );
     _write_controllers( \@objects );
-
     _write_views( \@objects );
     _write_layout( \@objects, $url_prefix );
     _write_tests( \@objects, $url_prefix );
     _copy_fragments();
 
     #Authorization
-    my $is_auth_object = 0;
-    my $auth_object_info ='';
-    if ( $application_description->[0]->{authorization} ) {
-        print Dumper $application_description->[0];
+    my $is_auth_object   = 0;
+    my $auth_object_info = '';
+    if ( $application_description->[0]->{authorization} )
+    {
+
+        #print Dumper $application_description->[0];
         my $auth_content = $application_description->[0]->{authorization};
         my $auth_yml = file( $application_location, 'config', "auth.yml" );
-        if ( -e $auth_yml ) {
+        if ( -e $auth_yml )
+        {
             msg( "Overiting existing $auth_yml", 1 );
-        }
-        else {
+        } else
+        {
             msg( "Creating $auth_yml", $is_verbose );
         }
-        YAML::Tiny::DumpFile( "$auth_yml", $auth_content );        
+        YAML::Tiny::DumpFile( "$auth_yml", $auth_content );
+
+        #set the authorization runtime
+        $runtime->{authorization} = $auth_content;
     }
-    
-        #paypal   
-    if ( $application_description->[0]->{paypal} ) {
+
+    #paypal
+    if ( $application_description->[0]->{paypal} )
+    {
+
         #create conf file
         my $paypal_content = $application_description->[0]->{paypal};
         my $paypal_yml = file( $application_location, 'config', "paypal.yml" );
-        if ( -e $paypal_yml ) {
+        if ( -e $paypal_yml )
+        {
             msg( "Overiting existing $paypal_yml", 1 );
-        }
-        else {
+        } else
+        {
             msg( "Creating $paypal_yml", $is_verbose );
         }
-        YAML::Tiny::DumpFile( "$paypal_yml", $paypal_content ); 
+        YAML::Tiny::DumpFile( "$paypal_yml", $paypal_content );
+
         #copy templates
-        for my $file ('cart.html.ep', 'view_cart.html.ep', 'paypal_transaction.html.ep', 'paypal_transaction_failed.html.ep') {
+        for my $file (
+                       'cart.html.ep',
+                       'view_cart.html.ep',
+                       'paypal_transaction.html.ep',
+                       'paypal_transaction_failed.html.ep'
+          )
+        {
             my $cart_template = file( $ZOE_FILES, 'templates', $file );
             copy( $cart_template, dir( $application_location, "templates" ) )
-            or croak "Could not copy $cart_template";       
+              or croak "Could not copy $cart_template";
         }
     }
 
     #add application location lib  to -I
     print " " . dir( $application_location, 'lib' ) . "\n\n";
     unshift @INC, "" . dir( $application_location, 'lib' );
-
-    foreach my $object (@objects) {
+    foreach my $object (@objects)
+    {
         my $type = $object->{object};
         my $lib_path;
         my $model_code = _get_model_code();
 
         #set the is_auth_object return values
-        if ($application_description->[0]->{authorization} ) {
-            if ( ($application_description->[0]->{authorization}->{config}->{data_object}) &&
-                ( $application_description->[0]->{authorization}->{config}->{data_object}->{auth_object}) =~ /$object->{object}/ ){
-                $is_auth_object =1;
-                $auth_object_info = sprintf("%s %s 
+        if ( $application_description->[0]->{authorization} )
+        {
+            if (
+                 (
+                   $application_description->[0]->{authorization}->{config}
+                   ->{data_object}
+                 )
+                 && ( $application_description->[0]->{authorization}->{config}
+                      ->{data_object}->{auth_object} ) =~ /$object->{object}/
+              )
+            {
+                $is_auth_object = 1;
+                $auth_object_info = sprintf(
+                    "%s %s 
                                              %s %s
                                              %s %s 
                                              %s %s 
                                              %s %s
                                              %s %s                                           
-                                             ", 
-                                    'auth_object', $application_description->[0]->{authorization}->{config}->{data_object}->{auth_object},
-                                    'role_column', $application_description->[0]->{authorization}->{config}->{data_object}->{role_column},
-                                    'salt_member', $application_description->[0]->{authorization}->{config}->{data_object}->{salt_member},
-                                    'password_member', $application_description->[0]->{authorization}->{config}->{data_object}->{password_member},
-                                    'user_name_member', $application_description->[0]->{authorization}->{config}->{data_object}->{user_name_member},
-                                    'role_object', $application_description->[0]->{authorization}->{config}->{data_object}->{role_object}
-                                             );
+                                             ",
+                    'auth_object',
+                    $application_description->[0]->{authorization}->{config}
+                      ->{data_object}->{auth_object},
+                    'role_column',
+                    $application_description->[0]->{authorization}->{config}
+                      ->{data_object}->{role_column},
+                    'salt_member',
+                    $application_description->[0]->{authorization}->{config}
+                      ->{data_object}->{salt_member},
+                    'password_member',
+                    $application_description->[0]->{authorization}->{config}
+                      ->{data_object}->{password_member},
+                    'user_name_member',
+                    $application_description->[0]->{authorization}->{config}
+                      ->{data_object}->{user_name_member},
+                    'role_object',
+                    $application_description->[0]->{authorization}->{config}
+                      ->{data_object}->{role_object}
+                );
             }
         }
         $model_code =~ s/\#__ISAUTHOBJECT__/$is_auth_object/gmx;
         $model_code =~ s/\#__AUTHOBJECTINFO__/$auth_object_info/gmx;
-
 
         #stores object meta info that is used later when writing tests
         $model_code =~ s/\#__TYPE__/$type/mx;
@@ -678,7 +781,8 @@ sub generate_mvc {
         # determine number of directores  below DataObject
         # set lib
         my @num_directories = split( /\:\:/xm, $type );
-        for ( my $i = 0 ; $i <= $#num_directories ; $i++ ) {
+        for ( my $i = 0 ; $i <= $#num_directories ; $i++ )
+        {
             $lib_path .= '../';
         }
         $lib_path .= 'lib';
@@ -696,7 +800,8 @@ sub generate_mvc {
           dir( $application_location, 'lib', @model_directories );
 
         #force $model_path to string by prepending empty string
-        unless ( -d $model_path ) {
+        unless ( -d $model_path )
+        {
             make_path( "" . $model_path )
               or croak "Cannot create $model_path: $!";
         }
@@ -724,56 +829,56 @@ sub generate_mvc {
 
         #used to specify default values for drop down
         my $select_options_string = '';
-
-        my $display_as = '';
+        my $display_as            = '';
 
         # set the member value shown when by default
         my $to_string_member;
 
         # column values to be searched in search query
         my $searchable_columns_string = '';
-        
-        
-        
-        foreach my $column (@columns) {
-            if ( $column->{to_string} ) {
+        foreach my $column (@columns)
+        {
+            if ( $column->{to_string} )
+            {
                 $to_string_member = $column->{name};
             }
-            if (    ( ! defined($column->{searchable}) ) ||
-                    ( $column->{searchable} == 1 )
-             ) {
+            if (    ( !defined( $column->{searchable} ) )
+                 || ( $column->{searchable} == 1 ) )
+            {
                 $searchable_columns_string .= "'$column->{name}', ";
             }
             $column_names .= $column->{name} . " ";
             if ( defined( $column->{primary_key} )
-                && ( $column->{primary_key} ) )
+                 && ( $column->{primary_key} ) )
             {
                 $primary_key = $column->{name};
             }
 
             #foreignkey setup
-            if ( defined( $column->{foreign_key} ) ) {
-                $foreign_key_code .= sprintf(
-                    q^$sql->{FOREIGNKEY}->{'%s'}->{'%s'} = '%s';^,
-                    $column->{name}, $column->{foreign_key},
-                    $column->{member}
-                );
+            if ( defined( $column->{foreign_key} ) )
+            {
+                $foreign_key_code .=
+                  sprintf( q^$sql->{FOREIGNKEY}->{'%s'}->{'%s'} = '%s';^,
+                           $column->{name}, $column->{foreign_key},
+                           $column->{member} );
                 $column_info_string .= "'$column->{name}', 'FOREIGNKEY',\n ";
+
                 #if ( $column->{linked_create} ) {
-                 #   my $rel_object_name = $column->{foreign_key};
-                  #  $linked_create{$rel_object_name} = $column->{member};
+                #   my $rel_object_name = $column->{foreign_key};
+                #  $linked_create{$rel_object_name} = $column->{member};
                 #}
-            }
-            else {
+            } else
+            {
                 my $input_type = $column->{input_type} || $column->{type};
                 $column_info_string .= "'$column->{name}', '$input_type',\n";
-
-                if ( $input_type eq 'select' ) {
+                if ( $input_type eq 'select' )
+                {
 
                     #print "SELECTOPTIONS\n" . Dumper $column->{select_options};
                     my %select_options = %{ $column->{select_options} };
                     my $options_string;
-                    foreach my $select_value ( sort keys(%select_options) ) {
+                    foreach my $select_value ( sort keys(%select_options) )
+                    {
                         my $select_content = $select_options{$select_value};
                         $options_string .=
 "<option value='$select_value'> $select_content </option>\n";
@@ -782,21 +887,21 @@ sub generate_mvc {
                       "'$column->{name}', q^$options_string^,\n";
                 }
             }
-            if ( defined( $column->{display} ) ) {
+            if ( defined( $column->{display} ) )
+            {
                 chomp( $column->{display} );
                 $column_display_string .=
                   "'$column->{name}' => q^$column->{display}^,\n";
             }
-            if (   ( defined( $column->{constraints} ) )
-                && ( $column->{constraints} =~ /not\s+null/imx ) )
+            if (    ( defined( $column->{constraints} ) )
+                 && ( $column->{constraints} =~ /not\s+null/imx ) )
             {
                 $is_required_column_string .= "'$column->{name}' => 1 , \n";
             }
-
-            if ( ( defined( $column->{display_as} ) ) ) {
+            if ( ( defined( $column->{display_as} ) ) )
+            {
                 $display_as .= "'$column->{name}', q^$column->{display_as}^,\n";
             }
-
         }
         my $object_name_short = $type;
         $object_name_short =~ s/.*\:\:(\w+)$/$1/gmx;
@@ -822,11 +927,11 @@ sub generate_mvc {
         # linked create - show create for child /parent objects
         ##################################################
         my %linked_create = ();
-        
-        
         my $has_many_code = "";
-        if ( defined( $object->{has_many} ) ) {
-            foreach my $has_many ( @{ $object->{has_many} } ) {
+        if ( defined( $object->{has_many} ) )
+        {
+            foreach my $has_many ( @{ $object->{has_many} } )
+            {
                 my $member = $has_many->{member};
                 $has_many_code .= sprintf(
 q^      #create array ref for has_many object unless it already exists 
@@ -840,23 +945,26 @@ q^      #create array ref for has_many object unless it already exists
                     $has_many->{member},    #object member
                     $has_many->{key},       #foreign key
                 );
-                if ( $has_many->{linked_create} ) {
+                if ( $has_many->{linked_create} )
+                {
                     my $rel_object_name = $has_many->{object};
                     $linked_create{$rel_object_name} = $has_many->{member};
                 }
-                if ( $has_many->{no_select}) {
-                     $no_select .= "'$member', 1, ";
+                if ( $has_many->{no_select} )
+                {
+                    $no_select .= "'$member', 1, ";
                 }
             }
         }
-
         $model_code =~ s/\#__HASMANY__/\#__HASMANY__\n$has_many_code\n/gmx;
         ##################################################
         # set many to many relationships
         ##################################################
         my $many_to_many_code = "";
-        if ( defined( $object->{many_to_many} ) ) {
-            foreach my $many ( @{ $object->{many_to_many} } ) {
+        if ( defined( $object->{many_to_many} ) )
+        {
+            foreach my $many ( @{ $object->{many_to_many} } )
+            {
                 my $member = $many->{member};
                 $many_to_many_code .= sprintf(
 q^      $sql->{MANYTOMANY}->{'%s'} = [] unless ( ref ($sql->{MANYTOMANY}->{'%s'}) eq 'ARRAY' ); ^
@@ -890,24 +998,23 @@ YML
                 my $many_to_may_co_ref =
                   YAML::Tiny->read_string($many_to_many_col_yml);
                 _do_create_ddl( $many->{table}, $many_to_may_co_ref->[0] );
-
-                if ( $many->{linked_create} ) {
+                if ( $many->{linked_create} )
+                {
                     my $rel_object_name = $many->{object};
                     $linked_create{$rel_object_name} = $many->{member};
                 }
-                if ( $many->{no_select}) {
-                     $no_select .= "'$member', 1, ";
+                if ( $many->{no_select} )
+                {
+                    $no_select .= "'$member', 1, ";
                 }
             }
         }
         $model_code =~ s/\#__NOSELECT__/$no_select/gmx;
-        
         $model_code =~
           s/\#__MANYTOMANY__/\#__MANYTOMANY__\n$many_to_many_code\n/gmx;
-          
         my $linked_create_code = '';
-
-        foreach my $object_name ( keys(%linked_create) ) {
+        foreach my $object_name ( keys(%linked_create) )
+        {
             my $rel_member = $linked_create{$object_name};
             $linked_create_code .= "'$object_name'=> '$rel_member',\n";
             $linked_create_code .= " '$rel_member'=> '$object_name',\n";
@@ -921,32 +1028,33 @@ YML
         _do_create_ddl( $object->{table}, $object->{columns} );
 
         # _do_create_ddl($many->{table},
-
         eval "use " . $object->{object};
     }
-
     _set_initial_values( \@objects );
     return;
 }
 
-sub _set_initial_values {
+sub _set_initial_values
+{
     return if ($no_ddl);
-    my $sqla = SQL::Abstract::More->new();
-    my $db_yml_tmp      = file( './', 'db.yml' );
+    my $sqla        = SQL::Abstract::More->new();
+    my $db_yml_tmp  = file( './', 'db.yml' );
     my $objects_ref = shift;
-    my $do              = Zoe::DataObject->new( DBCONFIGFILE => $db_yml_tmp ) or die "$db_yml_tmp $!";
+    my $do          = Zoe::DataObject->new( DBCONFIGFILE => $db_yml_tmp )
+      or die "$db_yml_tmp $!";
     my $application_DBH = $do->get_database_handle();
-    
+
     #get keys from object_ref and if == object add to use statement
-    foreach my $object ( @{$objects_ref} ) {
+    foreach my $object ( @{$objects_ref} )
+    {
         ###
         # save initial_values
         #
-        if ( $object->{initial_values} ) {
-
+        if ( $object->{initial_values} )
+        {
             my $object_type = $object->{object};
-
-            foreach my $initial_value ( @{ $object->{initial_values} } ) {
+            foreach my $initial_value ( @{ $object->{initial_values} } )
+            {
 
                 #$object_type->import;
                 my $initial_object = $object_type->new( %{$initial_value} );
@@ -954,32 +1062,31 @@ sub _set_initial_values {
                 #print "INITIAL VALUES  $object_type\n"
                 # . Dumper %{$initial_value};
                 $initial_object->save;
-
             }
         }
-        
         ##do inserts on join tables
-       
-         if ( $object->{insert} ) {
-             foreach my $insert (@{$object->{insert}}) {
-                 print Dumper $insert;
-                 my $table = $insert->{table};
-                 my $values_list = $insert->{values};
-                 foreach my $values (@$values_list) {
-                     my ($sql, @bind)= $sqla->insert(
-                        -into   => $table,
-                        -values => $values,
-                    );
+        if ( $object->{insert} )
+        {
+            foreach my $insert ( @{ $object->{insert} } )
+            {
+                print Dumper $insert;
+                my $table       = $insert->{table};
+                my $values_list = $insert->{values};
+                foreach my $values (@$values_list)
+                {
+                    my ( $sql, @bind ) = $sqla->insert( -into   => $table,
+                                                        -values => $values, );
                     my $sth = $application_DBH->prepare($sql);
-                    $sqla->bind_params($sth, @bind);
+                    $sqla->bind_params( $sth, @bind );
                     $sth->execute;
                 }
             }
-         }
+        }
     }
 }
 
-sub _do_create_ddl {
+sub _do_create_ddl
+{
     return if ($no_ddl);
     my $table           = shift;
     my $columns         = shift;
@@ -991,19 +1098,19 @@ sub _do_create_ddl {
 
     #drop table if exists
     ( $cmd, @bind ) = $sqlBuilder->generate( 'drop table if exists ', $table );
-
     $application_DBH->do($cmd);
 
     #create the tables
     #generate ddl and translate for db specified
     my $ddl = " create table $table ( ";
-    foreach my $column ( @{$columns} ) {
+    foreach my $column ( @{$columns} )
+    {
         my $primary_key = '';
         $primary_key = 'PRIMARY KEY AUTOINCREMENT'
           if ( $column->{primary_key} );
         $ddl .= sprintf( q^%s %s %s %s, ^,
-            $column->{name}, $column->{type}, $primary_key,
-            $column->{constraints} || " " );
+                         $column->{name}, $column->{type}, $primary_key,
+                         $column->{constraints} || " " );
     }
     $ddl .= ' LAST_MOD timestamp );';
     open( my $TEMPSQL, ">", "tmp.sql" )
@@ -1013,9 +1120,9 @@ sub _do_create_ddl {
     close $TEMPSQL;
     my $sql_translator = SQL::Translator->new( debug => 1, );
     my $create_ddl = $sql_translator->translate(
-        from     => 'SQLite',
-        to       => $database_type,
-        filename => './tmp.sql',
+                                                 from     => 'SQLite',
+                                                 to       => $database_type,
+                                                 filename => './tmp.sql',
       )
       or croak "Could not translate ddl sql to $database_type "
       . $sql_translator->error;
@@ -1025,7 +1132,8 @@ sub _do_create_ddl {
     #sql tranlsate returns sql with multiple commands
     #split by ; and execute each
     my @sql_commands = split( /\;/x, $create_ddl );
-    foreach my $sql (@sql_commands) {
+    foreach my $sql (@sql_commands)
+    {
         msg( $sql, $is_verbose );
         $application_DBH->do($sql)
           or croak $application_DBH->errstr . " \nSQL = $sql"
@@ -1034,24 +1142,22 @@ sub _do_create_ddl {
     return;
 }
 
-sub _get_model_code {
-    return read_file( file( $ZOE_FILES, 'templates', 'model.tpl.pm' ) );
+sub _get_model_code
+{
+    return read_file( file( $ZOE_FILES, 'templates', 'model.tpl' ) );
 }
 
-sub _write_startup_code {
-    my %arg                   = @_;
-    my $package_name          = $arg{application_name};
-    my $objects_ref           = $arg{objects};
-    my %environment_variables = %{ $arg{environment_variables} };
-    my $url_prefix            = $arg{url_prefix} || '';
-
+sub _write_startup_code
+{
+    my %arg                     = @_;
+    my $package_name            = $arg{application_name};
+    my $objects_ref             = $arg{objects};
+    my %environment_variables   = %{ $arg{environment_variables} };
+    my $url_prefix              = $arg{url_prefix} || '';
     my $startup_controller_file =
-      file( $ZOE_FILES, 'templates', 'startup_controller.tpl.pm' );
+      file( $ZOE_FILES, 'templates', 'startup_controller.tpl' );
     my $startup_code = read_file($startup_controller_file);
-
-     
-
-      $startup_code =~ s/\#__PACKAGENAME__/$package_name/gmx;
+    $startup_code =~ s/\#__PACKAGENAME__/$package_name/gmx;
     ##
     # set the environment variables
     ##my
@@ -1061,33 +1167,40 @@ sub _write_startup_code {
             if ( $_ =~ /^\d$/gmx )
             {
                 "\$ENV{$_ }  = $environment_variables{$_};";
-            }
-            else {
+            } else
+            {
                 "\$ENV{$_ }  = '$environment_variables{$_}';";
             }
           } keys(%environment_variables)
     );
     $startup_code =~ s/\#__ENVIRONMENTVAR__/$environment_str/gmx;
-
-    $startup_code =~ s/\#__URLPREFIX__/$url_prefix/gmx; 
-    
-    
+    $startup_code =~ s/\#__URLPREFIX__/$url_prefix/gmx;
     my $file = file( $application_location, 'lib', $application_name . ".pm" );
     write_file( "$file", $startup_code ) or croak "$file: $!";
     return;
 }
 
-sub _write_routes {
+sub _write_routes
+{
     my %arg        = @_;
     my $url_prefix = '';
     $url_prefix = $arg{url_prefix} if ( defined( $arg{url_prefix} ) );
     my $objects_ref = $arg{objects};
     my $begin_route =
       "###Begin Generated Routes -Content will be replaced on generate";
-    my $end_route = "###End Generated Routes";
-
+    my $end_route  = "###End Generated Routes";
     my $routes_yml = $begin_route . "\n";
-    foreach my $object ( @{$objects_ref} ) {
+    
+    ###add runtime routes
+    my $runtime_routes  = 
+             read_file(
+                       file( $ZOE_FILES, 'templates', 'runtime_routes.tpl' )     
+                            );
+    $runtime_routes =~ s/\#__URLPREFIX__/$url_prefix/gmx;
+    $routes_yml .= $runtime_routes . "\n";
+    
+    foreach my $object ( @{$objects_ref} )
+    {
 
         #route paths are based on objectnames
         #hello::world will create routes based on /world
@@ -1097,53 +1210,62 @@ sub _write_routes {
           $application_name . '::' . $object_name . 'Controller';
         $object_name = lc($object_name);
         my $routes_fragment_file =
-          file( $ZOE_FILES, 'templates', 'routes.tpl.yml' );
+          file( $ZOE_FILES, 'templates', 'routes.tpl' );
         my $routes_code = read_file($routes_fragment_file);
         $routes_code =~ s/\#__OBJECTNAME__/$object_name/gmx;
         $routes_code =~ s/\#__URLPREFIX__/$url_prefix/gmx;
         $routes_code =~ s/\#__CONTROLLER__/$controller_name/gmx;
         $routes_yml .= $routes_code;
     }
-
     $routes_yml .= $end_route;
     my $routes_file = file( $application_location, 'config', "routes.yml" );
-    if ( -e "$routes_file" ) {
+    if ( -e "$routes_file" )
+    {
         msg( "Updating existing $routes_file", $is_verbose );
         my $current_routes = read_file($routes_file);
         $current_routes =~ s/$begin_route(.*)$end_route/$routes_yml/sgm;
-
         $routes_yml = $current_routes;
-    }
-    else {
+    } else
+    {
         msg( "Generating new $routes_file", $is_verbose );
     }
-
     $routes_yml .= "\n" unless ( $routes_yml =~ /\n\n$/sgm );
     write_file( "$routes_file", $routes_yml ) or croak "$routes_file: $!";
 
+    #add routes to Runtime
+    my $routes = YAML::Tiny->read_string($routes_yml)
+      or croak " YAML Parse error in \$routes_yml";
+    $runtime->{routes} = $routes->[0];
+
+    #print Dumper $routes;
 }
 
-sub _write_views {
-
+sub _write_views
+{
     my $objects_ref = shift;
+
+    #copyruntime
+    my $runtime_file = file( $ZOE_FILES, 'templates', 'runtime.html.ep' );
+    copy( $runtime_file, dir( $application_location, "templates" ) )
+      or croak "Could not copy $runtime_file";
 
     #copy signin
     my $signin_file = file( $ZOE_FILES, 'templates', 'signin.html.ep' );
-
     copy( $signin_file, dir( $application_location, "templates" ) )
       or croak "Could not copy $signin_file";
-    #copy not authorized
-    my $not_authorized_file = file( $ZOE_FILES, 'templates', 'not_authorized.html.ep' );
 
+    #copy not authorized
+    my $not_authorized_file =
+      file( $ZOE_FILES, 'templates', 'not_authorized.html.ep' );
     copy( $not_authorized_file, dir( $application_location, "templates" ) )
-      or croak "Could not copy $not_authorized_file";    
-      
+      or croak "Could not copy $not_authorized_file";
+
     #copy example
-    
-    my $example =   file( $ZOE_FILES, 'templates', 'example','welcome.html.ep' );
+    my $example = file( $ZOE_FILES, 'templates', 'example', 'welcome.html.ep' );
     copy( $example, dir( $application_location, "templates", 'example' ) )
       or croak "Could not copy $example";
-    foreach my $object ( @{$objects_ref} ) {
+    foreach my $object ( @{$objects_ref} )
+    {
         my $object_name_short = $object->{object};
         my $object_name       = $object_name_short;
         $object_name_short =~ s/.*\:\:(\w+)$/$1/gmx;
@@ -1151,8 +1273,9 @@ sub _write_views {
         my $object_name_short_lc = lc($object_name_short);
 
         #set and create template directory
-        my $template_dir = dir( $application_location, "templates",
-            $object_name_short_lc . 'controller' );
+        my $template_dir =
+          dir( $application_location, "templates",
+               $object_name_short_lc . 'controller' );
         make_path( $template_dir . "" )
           or croak "Could not create $template_dir: $!"
           unless ( -d "$template_dir" );
@@ -1161,92 +1284,106 @@ sub _write_views {
         #show_all
         my $create_link = $object_name_short_lc . "_show_create";
         my $search_url  = $object_name_short_lc . "_search";
-        my $show_all =
+        my $show_all    =
           read_file( file( $ZOE_FILES, 'templates', 'show_all_view.tpl' ) );
         $show_all =~ s/\#__OBJECTNAMEPLURAL__/$object_name_plural/gmx;
         $show_all =~ s/\#__CREATELINK__/$create_link/gmx;
         $show_all =~ s/\#__SEARCHURL__/$search_url/gmx;
         my $show_all_file = file( $template_dir, 'show_all.html.ep' );
 
-        if ( ( -e $show_all_file ) && ( !$do_replace_existing ) ) {
+        if ( ( -e $show_all_file ) && ( !$do_replace_existing ) )
+        {
             msg( "View $show_all_file exists -- specify -replace to overwrite",
-                $is_verbose );
-        }
-        else {
+                 $is_verbose );
+        } else
+        {
             write_file( $show_all_file, $show_all )
               or croak "Could not write file $show_all_file: $!";
             msg( "View $show_all_file created ", $is_verbose );
         }
         my $delete_link = $object_name_short_lc . "_delete";
-        my $show =
+        my $show        =
           read_file( file( $ZOE_FILES, 'templates', 'show_view.tpl' ) );
         $show =~ s/\#__DELETELINK__/$delete_link/gmx;
         $show =~ s/\#__OBJECTSHORTNAME__/$object_name_short/gmx;
         my $show_file = file( $template_dir, 'show.html.ep' );
-        if ( ( -e $show_file ) && ( !$do_replace_existing ) ) {
+        if ( ( -e $show_file ) && ( !$do_replace_existing ) )
+        {
             msg( "View $show_file exists -- specify -replace to overwrite",
-                $is_verbose );
-        }
-        else {
+                 $is_verbose );
+        } else
+        {
             write_file( $show_file, $show )
               or croak "Could not write file $show_file: $!";
             msg( "View $show_file created ", $is_verbose );
         }
-        
-        my ($create_template, $edit_template, $salt_member, $password_member ) = '';
+        my ( $create_template, $edit_template, $salt_member, $password_member )
+          = '';
+
         #auth object objects use different edit and create templates
-        if ( ( ($application_description->[0]->{authorization} ) &&  ($application_description->[0]->{authorization}->{config}->{data_object}) &&
-            ( $application_description->[0]->{authorization}->{config}->{data_object}->{auth_object}) eq $object->{object} ) ){
-            $create_template = 'show_auth_object_create_view.tpl';
-            $edit_template = 'show_auth_object_edit_view.tpl';
-            
-            $salt_member = $application_description->[0]->{authorization}->{config}->{data_object}->{salt_member};
-            $password_member = $application_description->[0]->{authorization}->{config}->{data_object}->{password_member};
-          
-        }else {
-           $create_template = 'model_create_edit_view.tpl';
-           $edit_template = $create_template; 
-           #print Dumper $application_description->[0]->{authorization};        exit;
-        } 
-        
+        $salt_member ='';
+        $password_member = '';
+        if (
+             (
+               ( $application_description->[0]->{authorization} )
+               && ( $application_description->[0]->{authorization}->{config}
+                    ->{data_object} )
+               && ( $application_description->[0]->{authorization}->{config}
+                    ->{data_object}->{auth_object} ) eq $object->{object}
+             )
+          )
+        {
+            $create_template = 'model_create_edit_view.tpl';
+            $edit_template   = 'model_create_edit_view.tpl';
+            $salt_member     =
+              $application_description->[0]->{authorization}->{config}
+              ->{data_object}->{salt_member} ;
+            $password_member =
+              $application_description->[0]->{authorization}->{config}
+              ->{data_object}->{password_member} ;
+        } else
+        {
+            $create_template = 'model_create_edit_view.tpl';
+            $edit_template   = $create_template;
+
+      #print Dumper $application_description->[0]->{authorization};        exit;
+        }
         my $show_edit =
           read_file( file( $ZOE_FILES, 'templates', $edit_template ) );
         $show_edit =~ s/\#__PASSWORDMEMBER__/$password_member/gmx;
         $show_edit =~ s/\#__SALTMEMBER__/$salt_member/gmx;
-          
         $show_edit =~ s/\#__OBJECTSHORTNAME__/$object_name_short/gmx;
         my $update_name = lc( $object_name_short . '_update' );
         $show_edit =~ s/\#__URL__/$update_name/gmx;
         my $show_edit_file = file( $template_dir, 'show_edit.html.ep' );
-        if ( ( -e $show_edit_file ) && ( !$do_replace_existing ) ) {
-            msg( "View $show_edit_file exists -- specify -replace to overwrite",
-                $is_verbose );
-        }
-        else {
 
+        if ( ( -e $show_edit_file ) && ( !$do_replace_existing ) )
+        {
+            msg( "View $show_edit_file exists -- specify -replace to overwrite",
+                 $is_verbose );
+        } else
+        {
             write_file( "$show_edit_file", $show_edit )
               or croak "Could not write $show_edit_file: $!";
             msg( "View $show_edit_file created ", $is_verbose );
         }
-        
-        
         my $show_create =
           read_file( file( $ZOE_FILES, 'templates', $create_template ) );
         $show_create =~ s/\#__PASSWORDMEMBER__/$password_member/gmx;
         $show_create =~ s/\#__SALTMEMBER__/$salt_member/gmx;
-            
-          
         my $create_name = lc( $object_name_short . '_create' );
         $show_create =~ s/\#__URL__/$create_name/gmx;
         $show_create =~ s/\#__OBJECTSHORTNAME__/$object_name_short/gmx;
         my $show_create_file = file( $template_dir, 'show_create.html.ep' );
-        if ( ( -e $show_create_file ) && ( !$do_replace_existing ) ) {
+
+        if ( ( -e $show_create_file ) && ( !$do_replace_existing ) )
+        {
             msg(
 "View $show_create_file exists -- specify -replace to overwrite",
                 $is_verbose
             );
-        }
-        else {
+        } else
+        {
             write_file( $show_create_file, $show_create )
               or croak "Could not open $show_create_file: $!";
             msg( "View $show_create_file created ", $is_verbose );
@@ -1255,44 +1392,50 @@ sub _write_views {
     return;
 }
 
-sub _get_use_statement {
+sub _get_use_statement
+{
     my $objects_ref = shift;
     my $use_string  = '';
-    foreach my $object ( @{$objects_ref} ) {
+    foreach my $object ( @{$objects_ref} )
+    {
         my $object_name = $object->{object};
         $use_string .= "use $object_name;\n";
     }
     return $use_string;
 }
 
-sub _write_controllers {
+sub _write_controllers
+{
     my $objects_ref = shift;
 
     #get keys from object_ref and if == object add to use statement
     my $use_statement_string = _get_use_statement($objects_ref);
-    foreach my $object ( @{$objects_ref} ) {
+    foreach my $object ( @{$objects_ref} )
+    {
         my $object_name       = $object->{object};
         my $object_name_short = $object_name;
         $object_name_short =~ s/.*\:\:(\w+)$/$1/gmx;
         my $controller_name = $object_name_short . 'Controller';
         my $template_dir    = lc($controller_name);
         my $package_name    = $application_name . '::' . $controller_name;
-        my $upload_path =
+        my $upload_path     =
           dir( $application_location, "public", "upload", $object_name_short );
-        my $upload_short = dir( "upload", $object_name_short );
+        my $upload_short       = dir( "upload", $object_name_short );
         my $public_upload_path = "/upload/$object_name_short/";
 
-        if ( -d "$upload_path" ) {
+        if ( -d "$upload_path" )
+        {
             msg( "$upload_path exits", $is_verbose );
-        }
-        else {
+        } else
+        {
             msg( "Created $upload_path", $is_verbose );
             make_path("$upload_path") or croak "Could not create $upload_path";
         }
 
-     #my $tmp_file = file ($ZOE_FILES, "templates", "object_controller.tpl.pm");
-        my $controller_code = read_file(
-            "" . file( $ZOE_FILES, "templates", "object_controller.tpl.pm" ) );
+        #my $tmp_file = file ($ZOE_FILES, "templates", "object_controller.tpl");
+        my $controller_code =
+          read_file(
+                "" . file( $ZOE_FILES, "templates", "object_controller.tpl" ) );
         $controller_code =~ s/\#__PACKAGENAME__/$package_name/gmx;
         $controller_code =~ s/\#__OBJECTNAME__/$object_name/gmx;
         $controller_code =~ s/\#__TEMPLATEDIR__/$template_dir/gmx;
@@ -1301,15 +1444,16 @@ sub _write_controllers {
         $controller_code =~ s/\#__PUBLICUPLOADPATH__/$public_upload_path/gmx;
         my $controller_file =
           file( $application_location, 'lib', $application_name,
-            $controller_name . ".pm" );
+                $controller_name . ".pm" );
 
-        if ( ( -e "$controller_file" ) && ( !$do_replace_existing ) ) {
+        if ( ( -e "$controller_file" ) && ( !$do_replace_existing ) )
+        {
             msg(
 "Controller $controller_file exists--specify -replace to overwrite",
                 $is_verbose
             );
-        }
-        else {
+        } else
+        {
             msg( "Writing Controller: $controller_file", $is_verbose );
             write_file( $controller_file, $controller_code );
         }

@@ -3,6 +3,10 @@ package    #__PACKAGENAME__;
 
 use Mojo::Base 'Mojolicious';
 use Mojolicious::Plugin::Config;
+use Zoe::Runtime;
+use YAML::XS;
+
+
 use Zoe::AuthorizationManager;
 
 #custom helpers
@@ -17,6 +21,27 @@ use Mojo::Log;
 sub startup {
     my $self = shift;
 
+    #   Runtime
+    #   Reads runtime.yml and return as Zoe::Runtime
+    $self->helper(
+        get_runtime => sub {
+            my $runtime_yml =
+              file( dirname(__FILE__), '..', 'config', 'runtime.yml' );
+            if ( -e $runtime_yml ) {
+                my $runtime_config = 0;
+                $runtime_config = YAML::XS::LoadFile($runtime_yml)
+                  or croak " YAML Parse error in $runtime_yml";
+                  
+                my $runtime = Zoe::Runtime->new(%$runtime_config);  
+                return $runtime || 0;
+            }
+
+            return 0;
+        }
+    );  
+    
+    my $runtime =  $self->get_runtime();    
+
     #environment variables
     #__ENVIRONMENTVAR__
     $ENV{MOJO_REVERSE_PROXY} = 1;
@@ -28,9 +53,12 @@ sub startup {
     }
 
     #set the location for the db.yml file
-    my $db_yml = file( dirname(__FILE__), '..', 'config', 'db.yml' );
-    croak " Could not locate db.yml file: $db_yml" unless ( -e $db_yml );
-    Zoe::DataObject->new( DBCONFIGFILE => $db_yml );
+    #my $db_yml = file( dirname(__FILE__), '..', 'config', 'db.yml' );
+    #croak " Could not locate db.yml file: $db_yml" unless ( -e $db_yml );
+    #Zoe::DataObject->new( DBCONFIGFILE => $db_yml );
+
+    Zoe::DataObject->new( runtime => $runtime );    
+    
 
     # Documentation browser under "/perldoc"
     $self->plugin('PODRenderer');
@@ -66,6 +94,10 @@ sub startup {
             return 0;
         }
     );
+    
+
+  
+    
     
 #   Paypal
 #   Read paypal conf
@@ -197,11 +229,10 @@ sub startup {
     #read routes from config
     my $config = "$FindBin::Bin/../config/routes.yml";
 
-    if ( -e $config ) {
-        my $route_yml = YAML::Tiny->read($config)
-          or die "routes.yml error:$! \n" . YAML::Tiny->errstr;
+    if ( $runtime ) {
+        my $routes = $runtime->{routes};
 
-        foreach my $route ( @{ $route_yml->[0] } ) {
+        foreach my $route ( @{ $routes } ) {
             my $method     = $route->{method};
             my $path       = $route->{path};
             my $name       = $route->{name};

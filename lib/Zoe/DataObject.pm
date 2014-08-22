@@ -25,26 +25,31 @@ sub new {
     
     #my $environment = ($ENV{ZOE_ENV} or 'development');
 
-    my ( $config, $dbfile, $host, $dbuser, $dbpassword, $dbname, $port );
+    my ( $config, $dbfile, $host, $dbuser, $dbpassword, $dbname, $port, $runtime );
 
     #read config info from var
     $self->{TYPE} = $type;
 
-    #Read in config from param or use default
-    #config/db.yml file
-    $config = $arg{DBCONFIGFILE}
-      || "$FindBin::Bin/../config/db.yml";
-    confess "Could not read config file: $config" unless ( -e $config );
-    my $yaml = YAML::Tiny->read($config) or croak "malformed YML: $config";
+    $runtime = $arg{runtime};
+    unless ( $runtime ) {
 
-    $host       = $yaml->[0]->{database}->{host};
-    $port       = $yaml->[0]->{database}->{port};
-    $dbuser     = $yaml->[0]->{database}->{dbuser};
-    $dbpassword = $yaml->[0]->{database}->{dbpassword};
-    $DBTYPE     = $yaml->[0]->{database}->{type};
-    $dbname     = $yaml->[0]->{database}->{dbname};
-    $dbfile     = $yaml->[0]->{database}->{dbfile};
-    $is_verbose = $yaml->[0]->{database}->{is_verbose} || 0;
+        #Read in config from param or use default
+        #config/db.yml file
+        $config = $arg{DBCONFIGFILE}
+          || "$FindBin::Bin/../config/db.yml";
+        confess "Could not read config file: $config" unless ( -e $config );
+        $runtime =  YAML::XS::LoadFile($config) or croak "malformed YAML: $config";
+    }
+    
+
+    $host       = $runtime->{database}->{host};
+    $port       = $runtime->{database}->{port};
+    $dbuser     = $runtime->{database}->{dbuser};
+    $dbpassword = $runtime->{database}->{dbpassword};
+    $DBTYPE     = $runtime->{database}->{type};
+    $dbname     = $runtime->{database}->{dbname};
+    $dbfile     = $runtime->{database}->{dbfile};
+    $is_verbose = $runtime->{database}->{is_verbose} || 0;
 
     my $dsn = undef;
 

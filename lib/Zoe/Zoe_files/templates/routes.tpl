@@ -1,34 +1,48 @@
-    #set routes
-   
-    $r->get('/#__URLPREFIX__#__OBJECTNAME__')->name('#__OBJECTNAME___show_all')
-        ->to(namespace=>'#__CONTROLLER__' , action => 'show_all');
+- method: get
+  path: #__URLPREFIX__#__OBJECTNAME__
+  name: #__OBJECTNAME___show_all
+  controller: #__CONTROLLER__
+  action: show_all
+  
+- method: get
+  path: #__URLPREFIX__#__OBJECTNAME__/create
+  name: #__OBJECTNAME___show_create
+  controller: #__CONTROLLER__
+  action: show_create
+ 
+- method: get
+  path: #__URLPREFIX__#__OBJECTNAME__/:id
+  name: #__OBJECTNAME___show
+  controller: #__CONTROLLER__
+  action: show  
 
-    #show create form
-    $r->get('/#__URLPREFIX__#__OBJECTNAME__/create')->name('#__OBJECTNAME___show_create') 
-            ->to(namespace=>'#__CONTROLLER__', action => 'show_create');
+- method: get
+  path: #__URLPREFIX__#__OBJECTNAME__/edit/:id
+  name: #__OBJECTNAME___show_edit
+  controller: #__CONTROLLER__
+  action: show_edit
 
-    #show a specific object; id in request param
-    $r->get('/#__URLPREFIX__#__OBJECTNAME__/:id')->name('#__OBJECTNAME___show')
-            ->to(namespace=>'#__CONTROLLER__', action => 'show');
+- method: post
+  path: #__URLPREFIX__#__OBJECTNAME__/:id
+  name: #__OBJECTNAME___update
+  controller: #__CONTROLLER__
+  action: update 
 
-    #show edit form for object; in in request param
-    $r->get('/#__URLPREFIX__#__OBJECTNAME__/edit/:id')->name('#__OBJECTNAME___show_edit')
-            ->to(namespace=>'#__CONTROLLER__', action => 'show_edit');
+- method: any
+  path: #__URLPREFIX__#__OBJECTNAME___search
+  name: #__OBJECTNAME___search
+  controller: #__CONTROLLER__
+  action: search 
 
-    #update object
-    $r->post('/#__URLPREFIX__#__OBJECTNAME__/:id')->name('#__OBJECTNAME___update') 
-			 ->to(namespace=>'#__CONTROLLER__', action => 'update');
-			 
-	#search
-    $r->any('/#__URLPREFIX__#__OBJECTNAME___search')->name('#__OBJECTNAME___search') 
-			 ->to(namespace=>'#__CONTROLLER__', action => 'search');		 
-			 
+- method: post
+  path: #__URLPREFIX__#__OBJECTNAME__
+  name: #__OBJECTNAME___create
+  controller: #__CONTROLLER__
+  action: create  
+     
+- method: post
+  path: #__URLPREFIX__#__OBJECTNAME__/delete/:id
+  name: #__OBJECTNAME___delete
+  controller: #__CONTROLLER__
+  action: delete 
 
-    #create new object
-    $r->post('/#__URLPREFIX__#__OBJECTNAME__/')->name('#__OBJECTNAME___create')
-            ->to(namespace=>'#__CONTROLLER__' ,action => 'create');
-
-    #delete object
-    $r->post('/#__URLPREFIX__#__OBJECTNAME__/delete/:id')->name('#__OBJECTNAME___delete')
-            ->to(namespace=>'#__CONTROLLER__', action => 'delete');
-            

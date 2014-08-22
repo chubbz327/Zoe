@@ -6,6 +6,7 @@ BEGIN { unshift @INC, "$FindBin::Bin/#__LIB_PATH__" }
 use Zoe::DataObject;
 use parent qw( Zoe::DataObject);
 
+
 sub new {
     #set table definitions
     my $sql = {};

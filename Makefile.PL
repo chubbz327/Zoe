@@ -25,6 +25,7 @@ WriteMakefile(
                 'DateTime'=> '0', 
                 'DateTime::Format::DBI'=> '0',
                 'JSON::Parse' => '0', 
+		'YAML::XS' => '0',
               },
   EXE_FILES => [qw( script/zoe script/zoe-generator )],
   test      => {TESTS => 't/*.t'}

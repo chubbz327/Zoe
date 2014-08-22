@@ -96,6 +96,7 @@ sub _match_role {
     
 
     if ( $requested_url =~ /$route_path/igmx ) {
+        print "HEREdinni\n";
         debug( __PACKAGE__ . ": $route_path matches $requested_url " );
         foreach my $needed_role (@match_roles)
         {    #for this path *, all roles are accepted
@@ -112,7 +113,7 @@ sub _match_role {
 
             }
 
-            if (   ( $role_string =~ /$needed_role->{name}/igmx )
+            elsif (   ( $role_string =~ /$needed_role->{name}/igmx )
                 && ( $request_http_method eq $http_method  ) )
             {
 
@@ -134,7 +135,7 @@ sub _match_role {
                     $is_verbose
                 );
                 print "\n\nTHERE\n\n";
-                #return 'fail';
+                return 'fail';
             }
         }
     }

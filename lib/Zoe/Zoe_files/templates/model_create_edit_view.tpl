@@ -2,7 +2,9 @@
 % layout $layout;
 % my %helper_options = %{ $helper_opts }; 
 
-
+% my $password_member = '#__PASSWORDMEMBER__';
+% my $salt_member = '#__SALTMEMBER__';
+% my @ignore = ($salt_member, $password_member); #empty if not auth object
 
 %my $url = url_for('#__URL__', id=>$object->get_primary_key_value);
     
@@ -19,6 +21,34 @@
         <fieldset>
 
 %== get_inputs_for_dataobject( object=>$object, resolve_relationships => 1, prettyfy => 1, %helper_options );
+
+% # if authobject display 
+
+% if (length($password_member) ) {
+
+<div class="form-group">
+        
+        <label class="col-sm-2 control-label" for="password">Password</label>
+        <div class="col-sm-10">
+            <input  type='password'  class='required form-control' 
+              id="password" name="#__PASSWORDMEMBER__" 
+            size="25" value=""  minlength="1" class='form-control'  />
+        </div>
+</div>
+
+
+<div class="form-group">
+        <label class="col-sm-2 control-label" for="password_match">ReType Password</label>
+        <div class="col-sm-10">
+            <input  type='password'  class='required form-control'   
+                    id="password_match" name="password_match" 
+                    size="25" value=""  minlength="1"
+            equalTo='#password' />
+        </div>
+</div>
+
+%}
+
 % my %info1 =  $object->get_many_to_many_info();
 % my %info2 =  $object->get_has_many_info() ;
  
@@ -32,7 +62,7 @@
 		      
                  <label class="col-sm-2 control-label"for="<%= $member_name %>"><%= $member_name %></label>
                     <div class="col-sm-10">
-                    <select name="<%=$member_name %>" multiple='multiple' class='form-controlled'>
+                    <select name="<%=$member_name %>" multiple='multiple' class='form-control'>
         	           <%== get_options_for_many(object=>$object, td_attributest=>'colspan="2" ',
         			     member_name =>$member_name, label => $member_name);
         			     %>

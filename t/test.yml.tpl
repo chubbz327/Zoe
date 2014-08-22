@@ -1,14 +1,15 @@
-application_name: Employee
-location: #__CWD__
-environment_variables:
-   MOJO_MODE: development
-   MOJO_LISTEN: http://*:8889
+server_startup
+   application_name: Employee
+   location: #__CWD__
+   environment_variables:
+      MOJO_MODE: development
+      MOJO_LISTEN: http://*:8889
 database:
   type: sqlite
   dbfile: #__CWD__/app.db
   is_verbose: 1
    
-objects:
+models:
   - object: Namespace::Project
     many_to_many: 
      -  object: Namespace::Employee
