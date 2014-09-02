@@ -1,0 +1,47 @@
+
+% use List::MoreUtils qw{any};
+%    my $pkey_asc   = $controller->url_with->query( [ order_by => $object->get_primary_key_name ] );
+%    my $pkey_desc  = $controller->url_with->query( [ order_by => "-" . $object->get_primary_key_name ] );
+ 
+    <tr <%= $tr_attributes%> >                      
+        <th <%= $th_attributes %> >
+            <a href='<%= $pkey_asc%>'> 
+                <span class='glyphicon glyphicon-arrow-up'></span>  
+            </a>
+            %= $self->_prettyfy($object->get_display_as_for( $object->get_primary_key_name ) );
+            <a href='<%=$pkey_desc%>'> 
+                <span class='glyphicon glyphicon-arrow-down'></span>  
+            </a>
+        </th>
+    
+
+%    foreach my $column_name (@$column_names) {
+%        next if any { $column_name eq $_ } @$ignore;
+%        next if ( $object->get_primary_key_name eq $column_name );
+
+%#       ascending order
+%        my $url_asc = $controller->url_with->query( [ order_by => $column_name ] );
+
+%#       descending order_by
+%        my $url_desc = $controller->url_with->query( [ order_by => "-" . $column_name ] );
+        
+%#      if foreign key get the member name else use the column name
+
+%        my $member_name = ( $object->get_member_for_column($column_name) || $column_name );
+
+%#      make the table heading
+       
+       <th <%= $th_attributes %> >
+            <a href='<%= $url_asc %>'> 
+                <span class='glyphicon glyphicon-arrow-up'></span >  
+            </a>
+            
+%=        $self->_prettyfy( $object->get_display_as_for($member_name) );
+             
+            <a href='<%= $url_desc %>'> 
+                <span class='glyphicon glyphicon-arrow-down'></span >  
+            </a>
+       </th> 
+%    }  
+
+</tr> 

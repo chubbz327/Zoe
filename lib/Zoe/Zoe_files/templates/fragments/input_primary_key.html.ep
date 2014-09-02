@@ -1,0 +1,5 @@
+ <input type='hidden'  
+        id='<%="$prefix$primary_key_name" %>'
+        name='<%="$prefix$primary_key_name"%> ' 
+        value='<%="$primary_key_value"%>' />
+        

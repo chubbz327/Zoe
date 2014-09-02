@@ -1,0 +1,41 @@
+ <div class="form-group">
+ 
+    <label  class="col-sm-2 control-label" for='<%= $column_name%>'> <%= $pretty_name %>
+    </label>
+    <div class="col-sm-10">
+% if ( $check_input eq 'textarea' ) {
+
+        <textarea <%= $input_class %> id='<%= "$prefix$column_name"%>' name='<%= "$prefix$column_name"%>' >
+            <%= $value %>
+        </textarea>
+
+% } elsif ( $check_input eq 'select' ) {
+        <select name='<%= $column_name %>' <%= $input_class %> >
+        <option> ... </option>
+      
+        
+%==   $object->get_select_options_for($column_name);
+        </select>
+        
+% } elsif ( $check_input eq 'radio' ) {
+%   my $checked = '';
+%   $checked = 'checked="checked"'
+%   if ( $object->$method_name() );
+
+        <input  type='<%=  $input_type %>'
+                class='<%=  $input_class %>' 
+                id='<%= "$prefix$column_name" %>'
+                name='<%= "$prefix$column_name" %>' 
+                <%= $checked %>
+                />
+                
+% } else {
+        <input  type='<%=  $input_type %>'
+                class='<%=  $input_class %>' 
+                id='<%= "$prefix$column_name" %>' 
+                name='<%= "$prefix$column_name"%>' 
+                value='<%=$value %>'  minlength="1" />
+% }
+    </div> <!-- end input-->  
+ 
+</div>

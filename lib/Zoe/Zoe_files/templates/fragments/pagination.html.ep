@@ -1,0 +1,27 @@
+<ul class="pagination">
+
+<li><a href="<%= $prev_url %>">Prev</a></li>
+%   my $page_num = 1;
+%   my $max      = $count;
+%   if ( $max % $limit )
+%    {
+%        $max += ( ( $max % $limit ) - $limit ) * -1;
+%    }
+%    for ( my $i = 0 ; $i < $max - 1 ; $i += $limit )
+%    {
+%       my $paged_url = $controller->url_with->query(
+%                                                      [
+%                                                        order_by => $order_by,
+%                                                        offset   => $i,
+%                                                        limit    => $limit,
+%                                                        search   => $search
+%                                                      ]
+%        );
+        <li><a href="<%= $paged_url %>"><%=$page_num %></a></li>
+%        $page_num++;
+%    }
+        <li><a href="<%=$next_url%>">Next</a></li> 
+
+
+
+</ul>

@@ -1,0 +1,5 @@
+%      foreach my $key_name (@$runtime_keys) {
+           <li class='model_sidebar'><a href='#<%= $key_name %>'>
+            <i class='icon-chevron-right'></i> 
+            <%= $key_name %></a></li> 
+%      }
