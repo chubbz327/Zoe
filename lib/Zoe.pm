@@ -874,7 +874,7 @@ sub generate_mvc
                 if ( $input_type eq 'select' )
                 {
 
-                    #print "SELECTOPTIONS\n" . Dumper $column->{select_options};
+                    print "SELECTOPTIONS\n" . Dumper $column->{select_options};
                     my %select_options = %{ $column->{select_options} };
                     my $options_string;
                     foreach my $select_value ( sort keys(%select_options) )
@@ -1235,6 +1235,8 @@ sub _write_routes
     #add routes to Runtime
     my $routes = YAML::Tiny->read_string($routes_yml)
       or croak " YAML Parse error in \$routes_yml";
+      
+    #get routes from the sites section
     $runtime->{routes} = $routes->[0];
 
     #print Dumper $routes;

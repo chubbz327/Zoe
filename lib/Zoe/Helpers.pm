@@ -45,6 +45,7 @@ sub register
         get_options_for_many
         get_tableheading
         get_pagination
+        prettyfy
         )
       )
     {
@@ -118,7 +119,8 @@ sub _get_pagination
     my $self = shift;
     $self->_set_global_values(@_);
     return "" unless ( $count > $limit );
-    my $return_string = q^ <div class="pagination"> <ul>^;
+    my $return_string;
+#    my $return_string = q^ <div class="pagination"> <ul>^;
     my $next          = $offset;
     $next = ( $offset + $limit ) if ( ( $offset + $limit ) < $count );
     my $prev = 0;
@@ -142,28 +144,36 @@ sub _get_pagination
                                                    search   => $search
                                                  ]
     );
-    $return_string .= qq^<li><a href="$prev_url">Prev</a></li> ^;
-    my $page_num = 1;
-    my $max      = $count;
-    if ( $max % $limit )
-    {
-        $max += ( ( $max % $limit ) - $limit ) * -1;
-    }
-    for ( my $i = 0 ; $i < $max - 1 ; $i += $limit )
-    {
-        my $paged_url = $controller->url_with->query(
-                                                      [
-                                                        order_by => $order_by,
-                                                        offset   => $i,
-                                                        limit    => $limit,
-                                                        search   => $search
-                                                      ]
-        );
-        $return_string .= qq^<li><a href="$paged_url">$page_num</a></li> ^;
-        $page_num++;
-    }
-    $return_string .= qq^<li><a href="$next_url">Next</a></li> ^;
-    $return_string .= q^</ul></div>^;
+    
+#    $return_string .= qq^<li><a href="$prev_url">Prev</a></li> ^;
+#    my $page_num = 1;
+#    my $max      = $count;
+#    if ( $max % $limit )
+#    {
+#        $max += ( ( $max % $limit ) - $limit ) * -1;
+#    }
+#    for ( my $i = 0 ; $i < $max - 1 ; $i += $limit )
+#    {
+#        my $paged_url = $controller->url_with->query(
+#                                                      [
+#                                                        order_by => $order_by,
+#                                                        offset   => $i,
+#                                                        limit    => $limit,
+#                                                        search   => $search
+#                                                      ]
+#        );
+#        $return_string .= qq^<li><a href="$paged_url">$page_num</a></li> ^;
+#        $page_num++;
+#    }
+#    $return_string .= qq^<li><a href="$next_url">Next</a></li> ^;
+#    $return_string .= q^</ul></div>^;
+     $return_string = 
+            $controller->render_to_string('fragments/pagination',
+                controller=>$controller, 
+                count=>$count,
+                next_url=>$next_url,
+                prev_url => $prev_url,
+                ); 
     return $return_string;
 }
 
@@ -171,26 +181,31 @@ sub _get_tableheading
 {
     my $self = shift;
     $self->_set_global_values(@_);
-    my $return_string = qq^<tr $tr_attributes>^;
-    my $pkey_asc      =
-      $controller->url_with->query(
-                                [ order_by => $object->get_primary_key_name ] );
-    my $pkey_desc =
-      $controller->url_with->query(
-                          [ order_by => "-" . $object->get_primary_key_name ] );
-    $return_string .= qq^<th $th_attributes >
-								<a href='$pkey_asc'> 
-										<i class='icon-chevron-up'></i>  
-								</a>^
-      . $self->_prettyfy(
-                  $object->get_display_as_for( $object->get_primary_key_name ) )
-      . qq^
-								<a href='$pkey_desc'> 
-										<i class='icon-chevron-down'></i>  
-								</a>
-								</th>
-	
-	^;
+    
+#    my $pkey_asc      =
+#      $controller->url_with->query(
+#                                [ order_by => $object->get_primary_key_name ] );
+#    my $pkey_desc =
+#      $controller->url_with->query(
+#                          [ order_by => "-" . $object->get_primary_key_name ] );
+#                              
+#    my $pretty_name = $self->_prettyfy(
+#                  $object->get_display_as_for( $object->get_primary_key_name ) );                            
+                          
+#    my $return_string = qq^<tr $tr_attributes>^;                      
+#    $return_string .= qq^<th $th_attributes >
+#								<a href='$pkey_asc'> 
+#										<span class='glyphicon glyphicon-arrow-up'></span>  
+#								</a>^
+#      . $self->_prettyfy(
+#                  $object->get_display_as_for( $object->get_primary_key_name ) )
+#      . qq^
+#								<a href='$pkey_desc'> 
+#										<span class='glyphicon glyphicon-arrow-down'></span>  
+#								</a>
+#								</th>
+#	
+#	^;		
     my @column_names;
 
     if (@order)
@@ -199,36 +214,49 @@ sub _get_tableheading
     } else
     {
         @column_names = sort( keys(%column_info) );
-    }
-    foreach my $column_name (@column_names)
-    {
-        next if any { $column_name eq $_ } @ignore;
-        next if ( $object->get_primary_key_name eq $column_name );
-
-        #ascending order
-        my $url_asc =
-          $controller->url_with->query( [ order_by => $column_name ] );
-
-        #descending order_by
-        my $url_desc =
-          $controller->url_with->query( [ order_by => "-" . $column_name ] );
-
-        #if foreign key get the member name else use the column name
-        my $member_name =
-          ( $object->get_member_for_column($column_name) || $column_name );
-
-        #make the table heading
-        $return_string .= qq^<th $th_attributes>
-								<a href='$url_asc'> 
-										<i class='icon-chevron-up'></i>  
-								</a>^
-          . $self->_prettyfy( $object->get_display_as_for($member_name) ) . qq^ 
-								<a href='$url_desc'> 
-										<i class='icon-chevron-down'></i>  
-								</a>
-								</th> ^;
-    }
-    $return_string .= "</tr>";
+    }  
+#    foreach my $column_name (@column_names)
+#    {
+#        next if any { $column_name eq $_ } @ignore;
+#        next if ( $object->get_primary_key_name eq $column_name );
+#
+#        #ascending order
+#        my $url_asc =
+#          $controller->url_with->query( [ order_by => $column_name ] );
+#
+#        #descending order_by
+#        my $url_desc =
+#          $controller->url_with->query( [ order_by => "-" . $column_name ] );
+#
+#        #if foreign key get the member name else use the column name
+#        my $member_name =
+#          ( $object->get_member_for_column($column_name) || $column_name );
+#
+#        #make the table heading
+#        $return_string .= qq^<th $th_attributes>
+#								<a href='$url_asc'> 
+#										<span class='glyphicon glyphicon-arrow-up'></span >  
+#								</a>^
+#          . $self->_prettyfy( $object->get_display_as_for($member_name) ) . qq^ 
+#								<a href='$url_desc'> 
+#										<span class='glyphicon glyphicon-arrow-down'></span >  
+#								</a>
+#								</th> ^;
+#    }
+    
+    my $return_string = 
+            $controller->render_to_string('fragments/table_heading',
+                object => $object,
+                th_attributes => $th_attributes,
+                tr_attributes => $tr_attributes,
+                td_attributes => $td_attributes,
+                column_names => \@column_names,
+                controller => $controller, 
+                ignore  => \@ignore,
+                self => $self,
+            );   
+            
+    
     return $return_string;
 }
 

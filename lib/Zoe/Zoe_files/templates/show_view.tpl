@@ -25,34 +25,33 @@
 	% my %has_many_info = $object->get_has_many_info();
 	% foreach my $member_name ( keys( %has_many_info ) ) {
 	
-	<h3><%= $member_name %> </h3>
-	<table class='table table-striped'>
+	   <h3><%= $member_name %> </h3>
+	   <table class='table table-striped'>
 
-<tbody> 
+            <tbody> 
 		
-	<%== get_rows_for_many(object=>$object, td_attributest=>'colspan="2" ', 
-			member_name =>$member_name , prettyfy => 1);
-	%>
+	       <%== get_rows_for_many(object=>$object, td_attributest=>'colspan="2" ', 
+			     member_name =>$member_name , prettyfy => 1);
+	       %>
 	
-	</tbody>
-	</table>
+	        </tbody>
+	   </table>
 	
 	%}
 	
 	% my %many_info = $object->get_many_to_many_info();
 	% foreach my $member_name ( keys( %many_info ) ) {
 	
-		<h3><%= $member_name %> </h3>
-	<table class='table table-striped'>
+	   <h3><%= $member_name %> </h3>
+	   <table class='table table-striped'>
 
-<tbody> 
+            <tbody> 
 
-	<%== get_rows_for_many(object=>$object, td_attributest=>'colspan="2" ', 
-			member_name =>$member_name);
-			%>
-	%}
+	           <%== get_rows_for_many(object=>$object, td_attributest=>'colspan="2" ', 
+			         member_name =>$member_name);
+			     %>
+	
 		</tbody>
 	</table>
-	
-	</tbody>
-	</table>
+	% }
+

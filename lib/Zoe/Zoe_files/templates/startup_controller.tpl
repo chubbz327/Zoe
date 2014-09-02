@@ -5,7 +5,7 @@ use Mojo::Base 'Mojolicious';
 use Mojolicious::Plugin::Config;
 use Zoe::Runtime;
 use YAML::XS;
-
+use Data::Dumper;
 
 use Zoe::AuthorizationManager;
 
@@ -45,6 +45,7 @@ sub startup {
     #environment variables
     #__ENVIRONMENTVAR__
     $ENV{MOJO_REVERSE_PROXY} = 1;
+    $ENV{ZOE_APP_LIB} = dirname(__FILE__);
 
     #set the mode so the correct db entry is read from config file
     unless ( defined( $ENV{ZOE_ENV} ) ) {
@@ -57,6 +58,7 @@ sub startup {
     #croak " Could not locate db.yml file: $db_yml" unless ( -e $db_yml );
     #Zoe::DataObject->new( DBCONFIGFILE => $db_yml );
 
+    print Dumper $runtime;
     Zoe::DataObject->new( runtime => $runtime );    
     
 
@@ -78,6 +80,21 @@ sub startup {
         
         }
     );
+    
+    #log
+    
+    $self->helper(
+        log => sub {
+            my $self    = shift;
+            my $method  = shift;
+            my $caller  = ( caller(1) )[3];
+            my $message = __PACKAGE__ . ':' . $caller . ': ' . shift;
+            my $logger  = $self->get_logger();
+            return $logger->$method($message);
+    
+        }
+    );
+        
     #   Authorization
     #   Read authorization file auth.yml return as hash
     $self->helper(
@@ -231,8 +248,22 @@ sub startup {
 
     if ( $runtime ) {
         my $routes = $runtime->{routes};
+        my @list = ( @{ $routes } );
+        
+        #add the sites routes 
+        my @site_routes = ();
+        if ($runtime->{sites}) {
+            foreach my $site ( @{$runtime->{sites} } ){
+                #replace default with Zoe::SiteController
+                foreach my $site_route ( @{$site->{routes} }) {
+                    $site_route->{controller} =~ s/__DEFAULT__/Zoe::SiteController/;
+                    $site_route->{action} =~ s/__DEFAULT__/pass_to_handler/;
+                    push (@site_routes, $site_route);
+                }
+            }
+        }
 
-        foreach my $route ( @{ $routes } ) {
+        foreach my $route ( @list, @site_routes  ) {
             my $method     = $route->{method};
             my $path       = $route->{path};
             my $name       = $route->{name};
