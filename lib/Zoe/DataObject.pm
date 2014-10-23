@@ -834,7 +834,7 @@ sub search {
     my $self = shift;
     my %arg     = @_;
     my $order   = $arg{order} || [];
-    my $limit   = $arg{limit} || 0;
+    my $limit   = $arg{limit};
     my $offset  = $arg{offset} || 0;
     my $where   = $arg{where}  || {};
     my %sql     = %{ $self->{SQL} };
@@ -864,8 +864,6 @@ sub search {
 
     my $table_name = $sql{'TABLE'};
     debug( "Searching $table_name for $search_string", $is_verbose );
-    
-  
      
   
     my @clause = (
@@ -919,18 +917,31 @@ sub load_all {
     }
     debug( "Loading All from $table_name", $is_verbose );
     my $sql_builder = $self->_get_sql_builder;
-    my ( $cmd, @bind ) = $sql_builder->select(  -from =>$table_name, 
+    
+    my ( $cmd, @bind );
+    
+    if ( $limit ) {  	
+    	( $cmd, @bind ) = $sql_builder->select(  -from =>$table_name, 
                                                 -columns =>\@columns,
                                                 -where   =>$where,
                                                 -limit   => $limit, 
                                                 -offset  => $offset,
                                                 -order_by => $order,
                                                 );
+    } else {
+    	( $cmd, @bind ) = $sql_builder->select(  -from =>$table_name, 
+                                                -columns =>\@columns,
+                                                -where   =>$where,
+                                                -order_by => $order,
+                                                );
+    }
 
     debug( "SQL:: $cmd", $is_verbose );
     my $sth = $dbh->prepare($cmd);
     $sth->execute(@bind);
     @return = $self->_load_from_result($sth);
+    print Dumper @return;
+    
     return @return;
 }
 
@@ -1189,7 +1200,7 @@ sub _load_from_result {
     $obj  	    = $self unless shift;
     my %sql 	= %{ $obj->{SQL} };
     my @return;
-	
+	print Dumper $sth;
     while ( my $row = $sth->fetchrow_hashref() ) {
         my $obj = $self->new();
         foreach my $col ( keys( %{$row} ) ) {
@@ -1198,6 +1209,8 @@ sub _load_from_result {
         if ( $obj->{SQL}->{HASMANY} ) {
             
         }
+        print Dumper $obj;
+        
         push( @return, $obj );
     }
     return @return;
@@ -1222,8 +1235,9 @@ sub _load_has_many {
             
             next unless ($search_member eq $member);
             my $child    = $type->new();
+            my $my_id = ($obj->get_primary_key_value || 0 );
             my @children = $child->_load_fk(
-                where  => { $column => $obj->get_primary_key_value },
+                where  => { $column => $my_id },
                 object => $obj
             );
             $obj->{$member} = \@children;

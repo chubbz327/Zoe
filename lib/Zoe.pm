@@ -205,6 +205,7 @@ sub zoe_init
     @application_files = @{ $arg{application_config_file} };
     unless ($application_description)
     {
+    	$application_description = [];
         foreach my $file (@application_files)
         {
             my $config = YAML::XS::LoadFile($file)
@@ -218,13 +219,15 @@ sub zoe_init
             if ($tmp_ref){
                 %tmp_hash = %$tmp_ref;
             }else {
-                print Dumper $config;
+               # print Dumper $config;
                 %tmp_hash = %$config;
             }
             
         }
     }
     $application_description->[0] = \%tmp_hash;
+
+print Dumper $application_description->[0];
 
     #Set application name
     $application_name =

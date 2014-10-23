@@ -13,7 +13,7 @@ cpan> o conf prerequisites_policy follow
 cpan> o conf commit
 
 #install pre-reqs
-sudo ./prereqs.sh
+./prerequisites.sh
 perl Makefile.PL
 make 
 make test 

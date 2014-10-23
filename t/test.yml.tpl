@@ -1,4 +1,4 @@
-server_startup
+serverstartup:
    application_name: Employee
    location: #__CWD__
    environment_variables:
@@ -22,7 +22,6 @@ models:
     columns:
      -  name: ID
         type: integer
-        constraints: 
         primary_key: 1
      -  name: name
         type: text
@@ -35,7 +34,6 @@ models:
         display: |
             return "<img width='140' height='140' class='img-rounded' src='" . $object->get_image() . "'/>"; 
   
-		
   - object: Namespace::Employee
     many_to_many:
      -  object: Namespace::Project
@@ -48,7 +46,6 @@ models:
     columns:
      -  name: ID
         type: integer
-        constraints:
         primary_key: 1
      -  name: name
         type: text
@@ -69,7 +66,6 @@ models:
     columns:
      -  name: ID
         type: integer
-        constraints:
         primary_key: 1
      -  name: name
         type: text

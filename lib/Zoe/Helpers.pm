@@ -611,11 +611,13 @@ sub _get_options_for_many
     my $method_name  = "get_" . $member_name;
     my @many_objects = $object->$method_name;
 
-    #print "MEMBERNAME $member_name \n";
+    print "MEMBERNAME $member_name \n";
     my $type = $object->get_type_for_many_member($member_name);
     print "TYPE $type MEMBER $member_name\n";
     my @all_many_objects = $type->find_all();
     my $return_string    = "";
+    print Dumper @all_many_objects;
+    print "HEEEEEEEEEEEEEEEEEREEEEEEE\n";
     foreach my $many_object (@all_many_objects)
     {
         my $many_string = $many_object->to_string;
