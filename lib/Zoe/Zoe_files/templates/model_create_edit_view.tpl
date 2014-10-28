@@ -114,10 +114,16 @@
 </div> <!-- formgroup -->
 </form>
 <script>
+$( document ).ready(function() {
+console.log( "model create template loaded!" );
+$("#form_<%= $object->get_primary_key_value %>").validate();
+    
+});
+
 	//number of objects added to request params
 	var id_inc = 1;
     //initialize jquery validator
-    $("#form_<%= $object->get_primary_key_value %>").validate();
+    
     /*
 		Add the input values whose name contains prefix within div to an object
 		assign object json string to input param
