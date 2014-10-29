@@ -309,6 +309,12 @@ sub _write_tests
         my $object_name_short = $object_name;
         my $web_updated_code  = '';
         $object_name_short =~ s/.*\:\:(\w+)$/$1/gmx;
+        
+      	my $object_route = $object->{object};
+        $object_route =~ s/\:\:/\//g;        
+        $object_route = lc ($object_route);
+        
+        
         $test_use_list_string .= " '$object_name',\n";
         my $variable_name = "\$v$object_name_short";
         $save_test_code .= qq^$variable_name->save;\n^;
@@ -381,7 +387,7 @@ qq^\$v_tmp = $object_name->find($variable_name->get_primary_key_value);\n^
           . qq^ok(\$v_tmp->get_primary_key_value == $variable_name->get_primary_key_value, \n\t^
           . qq^'Find $object_name by primary_key ');\n^;
         $test_code =~ s/(\#__OBJECTCREATE__)/$1\n$create_new/gmx;
-        my $object_url_base = "/" . $url_prefix . $object_name_short;
+        my $object_url_base = "/" . $url_prefix . $object_route;
         $object_url_base = lc($object_url_base);
         my $show_url     = $object_url_base . '/';
         my $show_all_url = $object_url_base;
@@ -1209,6 +1215,11 @@ sub _write_routes
         #hello::world will create routes based on /world
         my $object_name = $object->{object};
         $object_name =~ s/.*\:\:(\w+)$/$1/mx;
+        my $object_route = $object->{object};
+        $object_route =~ s/\:\:/\//g;
+        
+        $object_route = lc ($object_route);
+        
         my $controller_name =
           $application_name . '::' . $object_name . 'Controller';
         $object_name = lc($object_name);
@@ -1216,6 +1227,7 @@ sub _write_routes
           file( $ZOE_FILES, 'templates', 'routes.tpl' );
         my $routes_code = read_file($routes_fragment_file);
         $routes_code =~ s/\#__OBJECTNAME__/$object_name/gmx;
+        $routes_code =~ s/\#__OBJECTROUTE__/$object_route/gmx;
         $routes_code =~ s/\#__URLPREFIX__/$url_prefix/gmx;
         $routes_code =~ s/\#__CONTROLLER__/$controller_name/gmx;
         $routes_yml .= $routes_code;

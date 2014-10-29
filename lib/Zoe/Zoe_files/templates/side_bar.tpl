@@ -11,7 +11,11 @@
 %  {
 %       my $object_name = $object->{object};
 %       $object_name =~ s/.*\:\:(\w+)$/$1/gmx;
-%       my $route_name = $url_prefix . $object_name;
+%	    my $object_route = $object->{object};
+%       $object_route =~ s/\:\:/\//g;
+        
+%       $object_route = lc ($object_route);
+%       my $route_name = $url_prefix . $object_route;
 %       $route_name = lc($route_name);
        
        
