@@ -283,6 +283,9 @@ sub _write_tests
 {
     my ($objects_ref) = shift;
     my $url_prefix            = shift || '';
+    
+    
+    
     my $test_use_list_string  = '';
     my $set_foreign_key_code  = '';
     my $create_new            = '';
@@ -388,7 +391,6 @@ qq^\$v_tmp = $object_name->find($variable_name->get_primary_key_value);\n^
           . qq^'Find $object_name by primary_key ');\n^;
         $test_code =~ s/(\#__OBJECTCREATE__)/$1\n$create_new/gmx;
         my $object_url_base = "/" . $url_prefix . $object_route;
-        $object_url_base = lc($object_url_base);
         my $show_url     = $object_url_base . '/';
         my $show_all_url = $object_url_base;
         my $post_url     = $object_url_base . '/';
@@ -409,6 +411,7 @@ qq^post_data('$post_url' . $variable_name->get_primary_key_value, $variable_name
     $test_code =~ s/\#__APPLICATIONNAME__/$application_name/gmx;
     $test_code =~ s/\#__TESTSHOW__/$test_show/gmx;
     $test_code =~ s/\#__TESTPOST__/$test_post/gmx;
+    $test_code =~ s/\#__URLPREFIX__/$url_prefix/gmx;
     write_file( "$test_file", $test_code ) or croak "Could not open $test_file";
     return;
 }
@@ -645,7 +648,7 @@ sub generate_mvc
     my $no_select = '';
 
     #set the url prefix for crud pages
-    my $url_prefix = '';
+    my $url_prefix = '__ADMIN__';
     $url_prefix = $application_description->[0]->{serverstartup}->{url_prefix}
       if (
          defined( $application_description->[0]->{serverstartup}->{url_prefix} )

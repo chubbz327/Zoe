@@ -16,11 +16,15 @@
         
 %       $object_route = lc ($object_route);
 %       my $route_name = $url_prefix . $object_route;
-%       $route_name = lc($route_name);
        
        
      
-<li class='model_sidebar'><a href='/<%= $route_name %>'><i class='icon-chevron-right'></i> <%= $object_name %></a></li>
+<li class='model_sidebar'>
+	<a href='/<%= $route_name %>'>
+		<i class='icon-chevron-right'></i>
+		<%= $object_name %>
+	</a>
+</li>
 
 
 % }

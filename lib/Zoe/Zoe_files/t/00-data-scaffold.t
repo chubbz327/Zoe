@@ -78,7 +78,7 @@ foreach my $object_type (@objects_to_test) {
 ####################################
 
 #make sure / works
-$t->get_ok( '/', '#__APPLICATIONNAME__ is up' )
+$t->get_ok( '/#__URLPREFIX__', '#__APPLICATIONNAME__ is up' )
   ->status_is( 200, '#__APPLICATIONNAME__ returned 200 for /' );
 
 #test find all and object by pkey via http
