@@ -299,7 +299,7 @@ sub show {
     );
 }
 
-sub show_edit {
+sub show_create_edit {
     my $self      = shift;
     my %args      = @_;
     my $type      = $args{type};
@@ -307,7 +307,8 @@ sub show_edit {
     my $id        = $self->param('id');
     my $message   = $self->param('message') || '';
     my $error_msg = $self->param('error_msg') || '';
-    my $object    = $type->find($id);
+    my $object    = $type->find($id) || $type->new;
+
 
     my $helper_opts = $args{helper_opts} || {};
 
@@ -318,28 +319,12 @@ sub show_edit {
         helper_opts => $helper_opts,
         layout      => $layout,
         message     => $message,
-        error_msg   => $error_msg
+        error_msg   => $error_msg,
+        type 		=> $type,
     );
 
 }
 
-sub show_create {
-    my $self        = shift;
-    my %args        = @_;
-    my $type        = $args{type};
-    my $template    = $args{template};
-    my $object      = $type->new();
-    my $helper_opts = $args{helper_opts} || {};
-    $layout = $args{layout} || $layout;
-
-    $self->render(
-        object      => $object,
-        template    => $template,
-        helper_opts => $helper_opts,
-        layout      => $layout
-    );
-
-}
 
 sub search {
     my $self        = shift;

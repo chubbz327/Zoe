@@ -10,7 +10,7 @@
 % foreach my $object ( @{$objects_ref} )
 %  {
 %       my $object_name = $object->{object};
-%       $object_name =~ s/.*\:\:(\w+)$/$1/gmx;
+%      # $object_name =~ s/.*\:\:(\w+)$/$1/gmx;
 %	    my $object_route = $object->{object};
 %       $object_route =~ s/\:\:/\//g;
         

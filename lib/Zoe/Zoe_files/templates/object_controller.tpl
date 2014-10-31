@@ -70,15 +70,19 @@ sub update {
 	return;
 }
 sub show_edit {
-    my $self    = shift;    
-    my $template= '#__TEMPLATEDIR__/show_edit';
-    $self->SUPER::show_edit(type =>$type, template => $template);
+    my $self    = shift; 
+    my %args 	= @_;
+       
+    my $template= $args{template} || '#__TEMPLATEDIR__/show_edit';
+    $self->SUPER::show_create_edit(type =>$type, template => $template);
     return;
 }
 sub show_create {
     my $self     = shift;
-    my $template = '#__TEMPLATEDIR__/show_create';
-	$self->SUPER::show_create(type =>$type, template => $template);
+    my %args 	= @_;
+       
+    my $template= $args{template} ||  '#__TEMPLATEDIR__/show_create';
+	$self->SUPER::show_create_edit(type =>$type, template => $template);
     return;
 }
 

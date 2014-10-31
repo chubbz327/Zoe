@@ -13,7 +13,7 @@
             enctype="multipart/form-data"
             class="form-horizontal" role="form">
             
-            <h2>#__OBJECTSHORTNAME__</h2>
+            <h2><%= $type %> </h2>
 
     <div id ='stored_inputs' style="display: none;"></div>
 

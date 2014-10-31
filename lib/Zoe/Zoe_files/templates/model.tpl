@@ -156,6 +156,10 @@ sub get_no_select {
     return (#__NOSELECT__);
 	 
 }
+sub get_object_short_name {
+	my $self = shift; 
+	return '#__OBJECTSHORTNAME__';
+}
 
 
 
