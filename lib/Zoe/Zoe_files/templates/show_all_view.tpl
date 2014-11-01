@@ -5,9 +5,9 @@
 
 
 
-<h1>#__OBJECTNAMEPLURAL__</h1>
+<h1><%= $type %> List</h1>
 <p>
-<a  href = '<%=url_for ("#__CREATELINK__") %>' class="btn btn-primary">Create New</a> 
+<a  href = '<%=url_for ($object->get_object_name_short_hand() . "_show_create") %>' class="btn btn-primary">Create New</a> 
 
 </p>
 %my $search_value = '';
@@ -19,9 +19,12 @@
 <div>
 %== get_pagination( object => $object, limit => $limit, offset => $offset, count=>$count, order_by => $order_by, search => $search );
 <br>
-<%= $count  %> #__OBJECTNAMEPLURAL__ returned <%= $search_value %><br>
+<%= $count . " $type " %> returned <%= $search_value %><br>
 
-<form method='POST' action='<%= url_for("#__SEARCHURL__") %>' id='form_search'
+
+
+
+<form method='POST' action='<%= url_for($object->get_object_name_short_hand() . "_search") %>' id='form_search'
         enctype="multipart/form-data">
         
  Search: <input type='text' name='search' size='20' /> &nbsp; <input type='submit' value='search' class='btn btn-info' />

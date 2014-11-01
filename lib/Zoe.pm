@@ -311,7 +311,7 @@ sub _write_tests
         my $object_name       = $object->{object};
         my $object_name_short = $object_name;
         my $web_updated_code  = '';
-        $object_name_short =~ s/.*\:\:(\w+)$/$1/gmx;
+        $object_name_short =~ s/\:\:/_/gmx;
         
       	my $object_route = $object->{object};
         $object_route =~ s/\:\:/\//g;        
@@ -352,7 +352,9 @@ qq^ ok($variable_name->get_primary_key_value, '$object_name save');\n^;
                 my $method        = 'set_' . $member;
                 my $fk_type       = $column->{foreign_key};
                 my $fk_short_name = $fk_type;
-                $fk_short_name =~ s/.*\:\:(\w+)$/$1/gmx;
+                #$fk_short_name =~ s/.*\:\:(\w+)$/$1/gmx;
+                $fk_short_name =~ s/\:\:/_/gmx;
+                
                 my $fk_variable_name = '$v' . $fk_short_name;
                 $set_foreign_key_code .=
                   qq^$variable_name->$method($fk_variable_name); ^;
@@ -741,6 +743,11 @@ sub generate_mvc
         my $type = $object->{object};
         my $lib_path;
         my $model_code = _get_model_code();
+        
+        #Set the object_route
+        
+        
+        
 
         #set the is_auth_object return values
         if ( $application_description->[0]->{authorization} )
@@ -916,7 +923,9 @@ sub generate_mvc
             }
         }
         my $object_name_short = $type;
-        $object_name_short =~ s/.*\:\:(\w+)$/$1/gmx;
+        $object_name_short =~ s/\:\:/_/gmx;
+        my $object_name_short_lc = lc($object_name_short);
+        $model_code =~ s/\#__OBJECTNAMESHORT__/$object_name_short_lc/gmx;
         my $upload_path =
           dir( $application_location, "public", "upload", $object_name_short );
         my $upload_short = dir( "upload", $object_name_short );
@@ -934,6 +943,7 @@ sub generate_mvc
         $model_code =~ s/\#__DISPLAYAS__/$display_as/gmx;
         $model_code =~ s/\#__COLUMNDISPLAY__/$column_display_string/gmx;
         $model_code =~ s/\#__ISREQUIRED__/$is_required_column_string/gmx;
+        
         ##################################################
         # set has many relationships
         # linked create - show create for child /parent objects
@@ -1204,20 +1214,21 @@ sub _write_routes
     my $routes_yml = $begin_route . "\n";
     
     ###add runtime routes
-    my $runtime_routes  = 
+    my $additional_routes  = 
              read_file(
-                       file( $ZOE_FILES, 'templates', 'runtime_routes.tpl' )     
+                       file( $ZOE_FILES, 'templates', 'additional_routes.tpl' )     
                             );
-    $runtime_routes =~ s/\#__URLPREFIX__/$url_prefix/gmx;
-    $routes_yml .= $runtime_routes . "\n";
+    $additional_routes =~ s/\#__URLPREFIX__/$url_prefix/gmx;
+    $routes_yml .= $additional_routes . "\n";
     
     foreach my $object ( @{$objects_ref} )
     {
 
         #route paths are based on objectnames
-        #hello::world will create routes based on /world
+        #hello::world will create  /hello/world
         my $object_name = $object->{object};
-        $object_name =~ s/.*\:\:(\w+)$/$1/mx;
+        #$object_name =~ s/.*\:\:(\w+)$/$1/mx;
+        $object_name =~ s/\:\:/_/gmx;
         my $object_route = $object->{object};
         $object_route =~ s/\:\:/\//g;
         
@@ -1288,9 +1299,10 @@ sub _write_views
     {
         my $object_name_short = $object->{object};
         my $object_name       = $object_name_short;
-        $object_name_short =~ s/.*\:\:(\w+)$/$1/gmx;
+        $object_name_short =~ s/\:\:/_/gmx;
         my $object_name_plural   = PL($object_name_short);
         my $object_name_short_lc = lc($object_name_short);
+        
 
         #set and create template directory
         my $template_dir =
@@ -1434,7 +1446,8 @@ sub _write_controllers
     {
         my $object_name       = $object->{object};
         my $object_name_short = $object_name;
-        $object_name_short =~ s/.*\:\:(\w+)$/$1/gmx;
+        #$object_name_short =~ s/.*\:\:(\w+)$/$1/gmx;
+        $object_name_short =~ s/\:\:/_/gmx;
         my $controller_name = $object_name_short . 'Controller';
         my $template_dir    = lc($controller_name);
         my $package_name    = $application_name . '::' . $controller_name;

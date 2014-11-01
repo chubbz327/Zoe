@@ -85,7 +85,7 @@
           <ul class="nav navbar-nav">
             <li class="active"><a href="/#__URLPREFIX__">Models</a></li>
             <li><a href="/#__URLPREFIX____RUNTIME__">Runtime</a></li>
-            <li><a href="#contact">Database</a></li>
+            <li><a href="/#__URLPREFIX____DOCUMENTATION__">Docs</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>

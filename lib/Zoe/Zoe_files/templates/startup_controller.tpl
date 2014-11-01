@@ -67,6 +67,15 @@ sub startup {
     $self->plugin('Zoe::Helpers');
     $self->plugin('DefaultHelpers');
 
+    # Return prefix for crud pages
+    $self->helper(
+        get_prefix => sub {
+            my $c = shift;            
+            return '/#__URLPREFIX__'; 
+        
+        }
+    );
+
 
     # Return a logger instance
     $self->helper(

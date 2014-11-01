@@ -46,6 +46,11 @@ sub get_column_info {
 	return @column_info;
 }
 
+sub get_route {
+	my $self 	= shift;
+	return '#__ROUTE__';
+}
+
 sub get_display_as_for {
 	my $self = shift;
 	my $column_name = shift;
@@ -156,10 +161,11 @@ sub get_no_select {
     return (#__NOSELECT__);
 	 
 }
-sub get_object_short_name {
+sub get_object_name_short_hand {
 	my $self = shift; 
-	return '#__OBJECTSHORTNAME__';
+	return '#__OBJECTNAMESHORT__';
 }
+
 
 
 

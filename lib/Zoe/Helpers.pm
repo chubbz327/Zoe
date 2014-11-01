@@ -108,7 +108,7 @@ sub _get_route_name_for_object
     my $object     = shift;
     my $append     = shift;
     my $route_name = $object->get_object_type();
-    $route_name =~ s/.*::(\w+)$/$1/;
+    $route_name =~ s/\:\:/_/gmx;
     $route_name .= $append;
     $route_name = lc($route_name);
     return $route_name;

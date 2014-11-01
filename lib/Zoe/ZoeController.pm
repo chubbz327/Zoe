@@ -8,11 +8,27 @@ use Digest::SHA1 qw(sha1_hex);
 use Data::Dumper;
 use Mojo::Exception;
 
+use Mojo::Util qw(slurp unindent url_escape);
+use Pod::Simple::XHTML 3.09;
+use Pod::Simple::Search;
+
+
 BEGIN { unshift @INC, "$FindBin::Bin/../" }
 use Data::GUID;
 
 my $layout = 'zoe';
+sub show_documentation {
+	my $self    = shift;
+	my $module = $self->param('module') || 'Zoe';
+	my $path
+    = Pod::Simple::Search->new->find($module, map { $_, "$_/pods" } @INC);
+  return $self->redirect_to("https://metacpan.org/pod/$module")
+    unless $path && -r $path; 
+    my $src = slurp $path;
+    my $doc =  $self->pod_to_html($src);
+	return $self->render(text => $doc, layout => $layout);
 
+}
 sub delete {
     my $self    = shift;
     my %args    = @_;
@@ -97,6 +113,7 @@ sub create {
     my $type    = $args{type};
     my $message = $args{message};
     my $object  = $type->new;
+    print Dumper $object;
 
     my $url = ( $args{url} || $self->_get_success($object) );
 
@@ -276,7 +293,8 @@ sub show_all {
         all         => \@all,
         template    => $template,
         helper_opts => $helper_opts,
-        layout      => $layout
+        layout      => $layout,
+        type		=> $type,
     );
 }
 
@@ -295,7 +313,8 @@ sub show {
         object      => $object,
         template    => $template,
         helper_opts => $helper_opts,
-        layout      => $layout
+        layout      => $layout,
+        type 		=> $type,
     );
 }
 
@@ -304,10 +323,12 @@ sub show_create_edit {
     my %args      = @_;
     my $type      = $args{type};
     my $template  = $args{template};
+    my $object_action = $args{object_action};
     my $id        = $self->param('id');
     my $message   = $self->param('message') || '';
     my $error_msg = $self->param('error_msg') || '';
     my $object    = $type->find($id) || $type->new;
+    
 
 
     my $helper_opts = $args{helper_opts} || {};
@@ -321,6 +342,7 @@ sub show_create_edit {
         message     => $message,
         error_msg   => $error_msg,
         type 		=> $type,
+        object_action => $object_action,
     );
 
 }
@@ -479,7 +501,9 @@ sub _set_values_from_request_param {
         my @object_list;
 
         foreach my $id (@id_list) {
-
+        	#undef value was being added to @id_list; weird;
+			next unless $id;
+			
             if ( $id =~ /^\d+$/ ) {    #object was selected from drop dwon
                 my $many_object = $type->find($id);
 

@@ -1,12 +1,17 @@
 
 % layout $layout;
 % my %helper_options = %{ $helper_opts }; 
-
-% my $password_member = '#__PASSWORDMEMBER__';
-% my $salt_member = '#__SALTMEMBER__';
+% my %auth_object_info = $object->auth_object_info();
+% my $password_member = $auth_object_info{password_member} || '';
+% my $salt_member = $auth_object_info{salt_member} || '';
 % my @ignore = ($salt_member, $password_member); #empty if not auth object
+% $object_action	= $type . $object_action;
+% $object_action =~ s/\:\:/_/g;
+% $object_action = lc ($object_action);
 
-%my $url = url_for('#__URL__', id=>$object->get_primary_key_value);
+
+
+%my $url = url_for( $object_action , id=>$object->get_primary_key_value);
     
     <form   method='POST' action='<%= $url %>' 
             id='form_<%=$object->get_primary_key_value %>'
@@ -31,7 +36,7 @@
         <label class="col-sm-2 control-label" for="password">Password</label>
         <div class="col-sm-10">
             <input  type='password'  class='required form-control' 
-              id="password" name="#__PASSWORDMEMBER__" 
+              id="password" name="<%=$password_member %>" 
             size="25" value=""  minlength="1" class='form-control'  />
         </div>
 </div>

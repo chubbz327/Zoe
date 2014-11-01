@@ -20,7 +20,8 @@ my $limit	= $ENV{ZOE_DISPLAY_LIMIT} || 10;
 sub delete {
     my $self    = shift;
     my $message	= '#__OBJECTNAME__ deleted';
-    $self->SUPER::delete(type=> $type, message => $message);    
+    $self->SUPER::delete(type=> $type, message => $message, 
+    object_action => '_delete');    
     return;
 }
 sub search {
@@ -44,7 +45,7 @@ sub show {
     my $self    = shift;
 	my $template	= '#__TEMPLATEDIR__/show';
 	
-	$self->SUPER::show(type =>$type, template => $template);
+	$self->SUPER::show(type =>$type, template => $template, );
 	return;
 }
 
@@ -56,7 +57,7 @@ sub create {
     my $url		= $self->url_for(
 									$self->param('route_name')
 								);       
-	$self->SUPER::create(type =>$type, message => $message, url => $url);
+	$self->SUPER::create(type =>$type, message => $message, url => $url,);
 	return;
 
 }
@@ -74,7 +75,8 @@ sub show_edit {
     my %args 	= @_;
        
     my $template= $args{template} || '#__TEMPLATEDIR__/show_edit';
-    $self->SUPER::show_create_edit(type =>$type, template => $template);
+    $self->SUPER::show_create_edit(type =>$type, template => $template, 
+    		object_action => '_update');
     return;
 }
 sub show_create {
@@ -82,7 +84,8 @@ sub show_create {
     my %args 	= @_;
        
     my $template= $args{template} ||  '#__TEMPLATEDIR__/show_create';
-	$self->SUPER::show_create_edit(type =>$type, template => $template);
+	$self->SUPER::show_create_edit(type =>$type, template => $template, 
+	object_action => '_create');
     return;
 }
 

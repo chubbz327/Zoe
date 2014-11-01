@@ -9,3 +9,9 @@
   name: __SAVE_RUNTIME__
   controller: Zoe::RuntimeController
   action: save  
+  
+- method: get
+  path: #__URLPREFIX____DOCUMENTATION__/
+  name: __SHOW_DOCUMENTATION__
+  controller: Zoe::ZoeController
+  action: show_documentation   
