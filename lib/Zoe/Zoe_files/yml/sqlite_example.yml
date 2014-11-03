@@ -1,73 +1,81 @@
-application_name: Testing
-location: /var/apps/testing_home
+serverstartup:
+   application_name: Employee
+   location: /tmp/zoe_apps/employee/
+   environment_variables:
+      MOJO_MODE: development
+      MOJO_LISTEN: http://*:8888
 database:
   type: sqlite
-  dbfile: /var/apps/testing_home/app.db
+  dbfile: /tmp/zoe_apps/employee/app.db
   is_verbose: 1
-objects:
-  - object: BFTG::DO::TestObject3
-    many_to_many: 
-     -  object: BFTG::DO::TestObject2
-        table: TestObject2XTestObject3
-        my_column: TestObject3_ID
-        relationship_col: TestObject2_ID
-        member: TestObject2_LIST
-        primary_key: ID
-    table: TestObject3
+
+models:
+  - object: Namespace::Picture				#model name
+    many_to_many:							#define many to many relation 
+     -  object: Namespace::Employee			#the join table
+        table: PictureXEmployee				#
+        my_column: Picture_ID
+        relationship_col: Employee_ID
+        member: Employees					#member that variable contains list []
+        primary_key: ID						#primary key of the join table
+        
+    table: Picture
     columns:
      -  name: ID
         type: integer
-        constraints: 
         primary_key: 1
      -  name: name
         type: text
         constraints: "not null"
-        to_string: 1  
+        to_string: 1
      -  name: image
         type: text
         input_type: file
         constraints: "not null"
         display: |
-            return "<img width='140' height='140' class='img-rounded' src='" . $object->get_image() . "'/>"; 
-  
-		
-  - object: BFTG::DO::TestObject2
-    many_to_many:
-     -  object: BFTG::DO::TestObject3
-        table: TestObject2XTestObject3
-        my_column: TestObject2_ID
-        relationship_col: TestObject3_ID
-        member: TestObject3_LIST
-        primary_key: ID
-    table: TestObject2
-    columns:
-     -  name: ID
-        type: integer
-        constraints:
-        primary_key: 1
-     -  name: name
-        type: text
-        constraints: "not null"
-        to_string: 1
-     -  name: TestObject1_ID
-        type: integer
-        constraints: 
-        foreign_key: BFTG::DO::TestObject1
-        member: TestObject1
-        
-  - object: BFTG::DO::TestObject1
-    has_many:
-     -  object: BFTG::DO::TestObject2
-        key: TestObject1_ID
-        member: TestObject2_LIST
-    table: TestObject1
-    columns:
-     -  name: ID
-        type: integer
-        constraints:
-        primary_key: 1
-     -  name: name
-        type: text
-        constraints: "not null"
-        to_string: 1
+            return "<img width='140' height='140' class='img-rounded' src='" . $object->get_image() . "'/>";
 
+  - object: Namespace::Employee
+    many_to_many:
+     -  object: Namespace::Picture
+        table: PictureXEmployee
+        my_column: Employee_ID
+        relationship_col: Picture_ID
+        member: Pictures
+        primary_key: ID
+        linked_create: 1					#add option to create Picture when creating Employee      
+    table: Employee
+    columns:
+     -  name: ID
+        type: integer
+        primary_key: 1
+     -  name: username
+        type: text
+        constraints: "not null"
+        to_string: 1
+     -  name: Department_ID
+        type: integer
+        constraints:
+        foreign_key: Namespace::Department
+        member: Department
+
+  - object: Namespace::Department
+    has_many:
+     -  object: Namespace::Employee
+        key: Department_ID
+        member: Employees
+    table: Department
+    columns:
+     -  name: ID
+        type: integer
+        primary_key: 1
+     -  name: name
+        type: text
+        constraints: "not null"
+        to_string: 1
+ 
+
+
+
+
+        

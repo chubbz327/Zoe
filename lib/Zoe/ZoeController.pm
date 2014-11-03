@@ -26,7 +26,7 @@ sub show_documentation {
     unless $path && -r $path; 
     my $src = slurp $path;
     my $doc =  $self->pod_to_html($src);
-	return $self->render(text => $doc, layout => $layout);
+	return $self->render(text => "<div id='perldoc'> $doc</div>", layout => $layout);
 
 }
 sub delete {
@@ -42,6 +42,7 @@ sub delete {
     $url = $self->_get_success($object) unless ($url);
     $object->delete();
     $self->flash( message => $message );
+     
     $self->redirect_to($url);
     return;
 }
@@ -425,8 +426,12 @@ sub _get_success {
     my $self         = shift;
     my $object       = shift;
     my $success_path = lc( $object->get_object_type );
-    $success_path =~ s/.*\:\:(\w+)$/$1/gmx;
+    $success_path =~ s/\:\:/_/gmx;
     $success_path .= '_show_all';
+    
+    print Dumper $success_path;
+    
+    print "SUCESSPATH\n\n";
     my $url = $self->url_for($success_path);
     return $url;
 }

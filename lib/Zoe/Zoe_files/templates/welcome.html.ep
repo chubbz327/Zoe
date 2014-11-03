@@ -1,0 +1,6 @@
+% layout 'zoe';
+% title 'Welcome';
+<h2></h2>
+This page was generated from the template "templates/zoe/welcome.html.ep"
+and the layout "templates/layouts/zoe.html.ep",
+

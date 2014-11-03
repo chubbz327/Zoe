@@ -10,7 +10,7 @@ sub show {
     my $runtime_keys    = $runtime->get_keys();
     $self->render(     
         runtime => $runtime,
-        template => "runtime",   
+        template => "zoe/runtime",   
         runtime_keys => $runtime_keys,     
     );
     

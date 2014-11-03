@@ -5,7 +5,7 @@
 <h1>View <%= $type %> </h1>
 <p>
 %my $primary_key_value = $object->get_primary_key_value;
-%my $url = url_for ($object->get_object_name_short_hand() ."_delete", id=> $primary_key_value);
+%my $url = url_for ($object->get_object_name_short_hand() ."_delete", id=> $primary_key_value );
 <form method='POST' action='<%= $url   %>' enctype="multipart/form-data" >
 
 <button class="btn btn-danger" type='submit'> Delete </button>

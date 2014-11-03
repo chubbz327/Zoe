@@ -250,7 +250,7 @@ sub startup {
 
     # Normal route to controller
    # $r->any('/')->to('example#welcome');
-    $r->any('/#__URLPREFIX__')->to('example#welcome');
+    $r->any('/#__URLPREFIX__')->to('zoe#welcome');
 
     #read routes from config
     my $config = "$FindBin::Bin/../config/routes.yml";

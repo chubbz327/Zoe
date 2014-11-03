@@ -20,13 +20,14 @@ my $limit	= $ENV{ZOE_DISPLAY_LIMIT} || 10;
 sub delete {
     my $self    = shift;
     my $message	= '#__OBJECTNAME__ deleted';
+  
     $self->SUPER::delete(type=> $type, message => $message, 
     object_action => '_delete');    
     return;
 }
 sub search {
 	my $self 		= shift;
-	my $template	=  '#__TEMPLATEDIR__/show_all';
+	my $template	=  'zoe/show_all';
 	my $limit		= 10;
 	
 	$self->SUPER::search(type => $type, template => $template, limit => $limit );
@@ -35,7 +36,7 @@ sub search {
 
 sub show_all {
     my $self    = shift;
-	my $template	=  '#__TEMPLATEDIR__/show_all';
+	my $template	=  'zoe/show_all';
 	my $limit		= 10;
     $self->SUPER::show_all(type => $type, template => $template, limit => $limit );
 	return; 
@@ -43,7 +44,7 @@ sub show_all {
 
 sub show {
     my $self    = shift;
-	my $template	= '#__TEMPLATEDIR__/show';
+	my $template	= 'zoe/show';
 	
 	$self->SUPER::show(type =>$type, template => $template, );
 	return;
@@ -74,7 +75,7 @@ sub show_edit {
     my $self    = shift; 
     my %args 	= @_;
        
-    my $template= $args{template} || '#__TEMPLATEDIR__/show_edit';
+    my $template= $args{template} || 'zoe/create_edit';
     $self->SUPER::show_create_edit(type =>$type, template => $template, 
     		object_action => '_update');
     return;
@@ -83,7 +84,7 @@ sub show_create {
     my $self     = shift;
     my %args 	= @_;
        
-    my $template= $args{template} ||  '#__TEMPLATEDIR__/show_create';
+    my $template= $args{template} ||  'zoe/create_edit';
 	$self->SUPER::show_create_edit(type =>$type, template => $template, 
 	object_action => '_create');
     return;

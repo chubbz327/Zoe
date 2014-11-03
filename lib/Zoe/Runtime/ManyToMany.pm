@@ -13,8 +13,12 @@ sub new
         member              => undef, #Object member variable which contains many to many objects
         primary_key         => undef, #primary key column of ManyToMany join table
         
+        linked_create		=> undef, #boolean; show child object create on create page
+        no_select			=> undef, #do not show in create							  
+        
         mandatory_fields => [ 'object', 'relationship_col', 'my_column', 
                                'table', 'primary_key', 'member' ],    #mandatory fields
+        
          
         %arg
     };
@@ -39,10 +43,15 @@ keys and description below
         my_column           Objects' column in ManyToMany join table
         member              Object member variable which contains many to many objects
         primary_key         primary key column of ManyToMany join table
-        
+         
+        linked_create		=> undef, #boolean; show child object create on create page
+        no_select			=> undef, #do not show in create			
+               
         mandatory_fields => [ 'object', 'relationship_col', 'my_column', 
                                'table', 'primary_key', 'member' ],    #mandatory fields
-
+		
+		optional_fields => ['linked_create']
+		
 
 =head1 Author
     
