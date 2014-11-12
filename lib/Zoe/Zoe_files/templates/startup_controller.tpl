@@ -17,6 +17,14 @@ use File::Basename 'dirname';
 use Path::Class;
 use Carp;
 use Mojo::Log;
+
+
+###############
+#Application models
+
+#__USESTATEMENTS__
+
+
 # This method will run once at server start
 sub startup {
     my $self = shift;
@@ -58,7 +66,7 @@ sub startup {
     #croak " Could not locate db.yml file: $db_yml" unless ( -e $db_yml );
     #Zoe::DataObject->new( DBCONFIGFILE => $db_yml );
 
-    print Dumper $runtime;
+    
     Zoe::DataObject->new( runtime => $runtime );    
     
 
@@ -263,10 +271,50 @@ sub startup {
         my @site_routes = ();
         if ($runtime->{sites}) {
             foreach my $site ( @{$runtime->{sites} } ){
-                #replace default with Zoe::SiteController
+            	my $site_name = $site->{name};
+            	my $site_prefix = $site->{url_prefix};
+            	print Dumper ($site->{models});
+            	####default site routes created for every object reference####
+            	foreach my $model ( @{$site->{models} }) {
+            		my $obj = $model->{name}->new();
+            		
+            		###show 
+            		my $site_route = {};
+            		$site_route->{method}=  'get';
+            		#$site_route->{path} = sprintf('%s%s\/:id', $site_prefix, $obj->get_object_name_short_hand);  
+            		$site_route->{path} = $site_prefix .  $obj->get_object_name_short_hand . '/:id';
+            		$site_route->{name} = $site_name . '_show_' . $obj->get_object_name_short_hand;
+            		$site_route->{controller} = 'Zoe::SiteController';
+            		$site_route->{action} = 'show';  
+            		$site_route->{options => {type => $obj->{type} } };
+            		push (@site_routes, $site_route);
+                    
+            		
+            		##show all 
+            		$site_route = {};
+            		$site_route->{method}=  'get';
+            		#$site_route->{path} = sprintf('%s%s\/:id', $site_prefix, $obj->get_object_name_short_hand);  
+            		$site_route->{path} = $site_prefix .  $obj->get_object_name_short_hand;
+            		$site_route->{name} = $site_name . '_show_all_' . $obj->get_object_name_short_hand;
+            		$site_route->{controller} = 'Zoe::SiteController';
+            		$site_route->{action} = 'show_all';  
+            		$site_route->{options => {type => $obj->{type} } };
+            		push (@site_routes, $site_route);
+            	
+                }
+            	
+                #replace default with Zoe::SiteController                
                 foreach my $site_route ( @{$site->{routes} }) {
-                    $site_route->{controller} =~ s/__DEFAULT__/Zoe::SiteController/;
-                    $site_route->{action} =~ s/__DEFAULT__/pass_to_handler/;
+                	if ( defined ( $site_route->{controller} ) ) {
+                		$site_route->{controller} =~ s/__DEFAULT__/Zoe::SiteController/;
+                	} else {
+                		$site_route->{controller} = 'Zoe::SiteController';
+                	}
+                	if (  defined($site_route->{action}) ) {
+                		$site_route->{action} =~ s/__DEFAULT__/pass_to_handler/;
+                	} else {
+                		$site_route->{action} = 'pass_to_handler';
+                	}
                     push (@site_routes, $site_route);
                 }
             }
@@ -279,8 +327,14 @@ sub startup {
             my $controller = $route->{controller};
             my $action     = $route->{action};
 
-            $r->$method($path)->name($name)
-              ->to( namespace => $controller, action => $action );
+            
+            if ( defined ($route->{options}) ) {
+            	$r->$method($path)->name($name)
+                ->to( namespace => $controller, action => $action, %{ $route->{options} });
+            }else {
+            	$r->$method($path)->name($name)
+                ->to( namespace => $controller, action => $action );
+            }
 
         }
 

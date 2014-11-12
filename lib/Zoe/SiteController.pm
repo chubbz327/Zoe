@@ -1,6 +1,6 @@
 package Zoe::SiteController;
 
-use Mojo::Base 'Mojolicious::Controller';
+use Mojo::Base 'Zoe::ZoeController';
 use FindBin;
 use JSON::Parse 'json_to_perl';
 use Data::Dumper;

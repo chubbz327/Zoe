@@ -77,6 +77,8 @@ sub do_check {
     my $salt  = $user->{$salt_member};
     my $hash  = sha1_hex($salt . $password);
     
+    
+    print "HASH $hash IS SHOULD BE " .  $user->{$password_member} . "\n";
     return 0 unless($hash eq $user->{$password_member});
 
 

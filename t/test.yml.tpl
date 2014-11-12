@@ -2,8 +2,10 @@ serverstartup:
    application_name: Employee
    location: #__CWD__
    environment_variables:
-      MOJO_MODE: development
-      MOJO_LISTEN: http://*:8889
+      - key: MOJO_MODE
+        value: development
+      - key: MOJO_LISTEN
+        value: http://*:8889
 database:
   type: sqlite
   dbfile: #__CWD__/app.db

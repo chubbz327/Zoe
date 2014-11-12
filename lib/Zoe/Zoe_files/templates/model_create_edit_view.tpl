@@ -2,14 +2,14 @@
 % layout $layout;
 % my %helper_options = %{ $helper_opts }; 
 % my %auth_object_info = $object->auth_object_info();
-% my $password_member = $auth_object_info{password_member} || '';
+% my $password_member = $auth_object_info{password_member} ||0 ;
 % my $salt_member = $auth_object_info{salt_member} || '';
 % my @ignore = ($salt_member, $password_member); #empty if not auth object
 % $object_action	= $type . $object_action;
 % $object_action =~ s/\:\:/_/g;
 % $object_action = lc ($object_action);
 
-
+%== dumper %auth_object_info ;
 
 %my $url = url_for( $object_action , id=>$object->get_primary_key_value);
     
@@ -25,11 +25,11 @@
     
         <fieldset>
 
-%== get_inputs_for_dataobject( object=>$object, resolve_relationships => 1, prettyfy => 1, %helper_options );
+%== get_inputs_for_dataobject( object=>$object, resolve_relationships => 1, prettyfy => 1, %helper_options, ignore => \@ignore );
 
 % # if authobject display 
 
-% if (length($password_member) ) {
+% if ( $password_member ) {
 
 <div class="form-group">
         

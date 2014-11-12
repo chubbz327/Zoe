@@ -44,6 +44,7 @@ my (
 	$ZOE_HOME,                #home directory in which Zoe is installed
 	$ZOE_FILES,               # zoe template files
 	$runtime,                 #application runtime,
+	$application_runtime_type, #generated class that represents app runtime 
 	$mojolicious_template,
 );
 
@@ -260,23 +261,26 @@ sub zoe_init {
 	
 	
 	#Read in the runtime yml 
-	my $runtime_tpl =
-	  file( $ZOE_FILES, 'yml', 'runtime.yml.tpl' );
-	my $runtime_code = read_file($runtime_tpl);
+	#my $runtime_tpl =
+	 # file( $ZOE_FILES, 'yml', 'runtime.yml.tpl' );
+	#my $runtime_code = read_file($runtime_tpl);
 	
 	#replace application name
-	$runtime_code =~ s/__APPLICATION_NAME__/$application_description->[0]->{serverstartup}->{application_name}/gmx;
+	#$runtime_code =~ s/__APPLICATION_NAME__/$application_description->[0]->{serverstartup}->{application_name}/gmx;
 	
-	my $runtime_config = YAML::XS::Load($runtime_code)
-			  or croak " YAML Parse error in $runtime_code"
-			  . YAML::Tiny->errstr;
+	#set the runtime type
+	#$application_runtime_type = $application_description->[0]->{serverstartup}->{application_name} .
+	#		"::Runtime::Runtime";
+	#my $runtime_config = YAML::XS::Load($runtime_code)
+	#		  or croak " YAML Parse error in $runtime_code"
+	#		  . YAML::Tiny->errstr;
 	
-	print Dumper $runtime_config->{models};
-	my $tmp_ref = Hash::Merge->new('RETAINMENT_PRECEDENT')
-			  ->merge( $runtime_config->{models}, $application_description->[0]->{models} );
+	#print Dumper $runtime_config->{models};
+	#my $tmp_ref = Hash::Merge->new('RETAINMENT_PRECEDENT')
+	#		  ->merge( $runtime_config->{models}, $application_description->[0]->{models} );
 			  
 	#add runtime models to app desc			  			  
-	$application_description->[0]->{models} = 	$tmp_ref;	  
+	#$application_description->[0]->{models} = 	$tmp_ref;	  
 	
 	#create the Application RunTime
 	$runtime = Zoe::Runtime->new( %{ $application_description->[0] } );
@@ -543,8 +547,11 @@ sub generate_mojo_app {
 	#my $do_file = file( '..', 'lib', 'Zoe', 'DataObject.pm' );
 	#my $do_dir = dir( $application_location, 'lib', 'Zoe' );
 	#copy assets .css .js .img
-	my $from_asset = dir( $ZOE_FILES,            'public', 'assets' );
-	my $to_asset   = dir( $application_location, 'public', 'assets' );
+	#my $from_asset = dir( $ZOE_FILES,            'public', 'assets' );
+	#my $to_asset   = dir( $application_location, 'public', 'assets' );
+	my $from_asset = dir( $ZOE_FILES,            'public' );
+	my $to_asset   = dir( $application_location, 'public' );
+	
 	dircopy( "" . $from_asset, "" . $to_asset )
 	  or croak "could not copy $from_asset to $to_asset: $!";
 	msg( "Copied $from_asset\n\tto $to_asset", $is_verbose );
@@ -656,18 +663,18 @@ sub generate_mvc {
 	}
 
 	#Set the environment variables used in generated application
-	my %environment_variables = ();
+	my @environment_variables = ();
 	if ( $application_description->[0]->{serverstartup}
 		->{environment_variables} )
 	{
-		%environment_variables =
-		  %{ $application_description->[0]->{serverstartup}
+		@environment_variables =
+		 @{ $application_description->[0]->{serverstartup}
 			  ->{environment_variables} };
 	}
 	_write_startup_code(
 		application_name      => $application_name,
 		objects               => \@objects,
-		environment_variables => \%environment_variables,
+		environment_variables => \@environment_variables,
 		url_prefix            => $url_prefix
 	);
 	_write_routes(
@@ -680,9 +687,7 @@ sub generate_mvc {
 	_write_tests( \@objects, $url_prefix );
 	_copy_fragments();
 
-	#Authorization
-	my $is_auth_object   = 0;
-	my $auth_object_info = '';
+	
 	if ( $application_description->[0]->{authorization} ) {
 
 		#print Dumper $application_description->[0];
@@ -730,6 +735,9 @@ sub generate_mvc {
 	print " " . dir( $application_location, 'lib' ) . "\n\n";
 	unshift @INC, "" . dir( $application_location, 'lib' );
 	foreach my $object (@objects) {
+		#Authorization
+		my $is_auth_object   = 0;
+		my $auth_object_info = '';
 		my $type = $object->{object};
 		my $lib_path;
 		my $model_code = _get_model_code();
@@ -1022,6 +1030,9 @@ YML
 		eval "use " . $object->{object};
 	}
 	_set_initial_values( \@objects );
+	
+
+	
 	return;
 }
 
@@ -1054,7 +1065,7 @@ sub _set_initial_values {
 		##do inserts on join tables
 		if ( $object->{insert} ) {
 			foreach my $insert ( @{ $object->{insert} } ) {
-				print Dumper $insert;
+				#print Dumper $insert;
 				my $table       = $insert->{table};
 				my $values_list = $insert->{values};
 				foreach my $values (@$values_list) {
@@ -1133,8 +1144,9 @@ sub _write_startup_code {
 	my %arg                   = @_;
 	my $package_name          = $arg{application_name};
 	my $objects_ref           = $arg{objects};
-	my %environment_variables = %{ $arg{environment_variables} };
+	my @environment_variables = @{ $arg{environment_variables} };
 	my $url_prefix            = $arg{url_prefix} || '';
+	my $use_statement_string = _get_use_statement($objects_ref);
 	my $startup_controller_file =
 	  file( $ZOE_FILES, 'templates', 'startup_controller.tpl' );
 	my $startup_code = read_file($startup_controller_file);
@@ -1142,20 +1154,15 @@ sub _write_startup_code {
 	##
 	# set the environment variables
 	##my
-	my $environment_str = join(
-		"\n",
-		map {
-			if ( $_ =~ /^\d$/gmx )
-			{
-				"\$ENV{$_ }  = $environment_variables{$_};";
-			}
-			else {
-				"\$ENV{$_ }  = '$environment_variables{$_}';";
-			}
-		  } keys(%environment_variables)
-	);
+	my $environment_str;
+	
+	foreach my $entry (@environment_variables) {
+		$environment_str .= sprintf('$ENV{%s} = "%s"' . ";\n", $entry->{key}, $entry->{value});
+		
+	}
 	$startup_code =~ s/\#__ENVIRONMENTVAR__/$environment_str/gmx;
 	$startup_code =~ s/\#__URLPREFIX__/$url_prefix/gmx;
+	$startup_code =~ s/\#__USESTATEMENTS__/$use_statement_string/gmx;
 	my $file = file( $application_location, 'lib', $application_name . ".pm" );
 	write_file( "$file", $startup_code ) or croak "$file: $!";
 	return;

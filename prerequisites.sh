@@ -2,6 +2,7 @@
 
  curl -L http://cpanmin.us | perl - --sudo App::cpanminus
 /usr/local/bin/cpanm Class::MOP;
+/usr/local/bin/cpanm Data::Structure::Util;
 /usr/local/bin/cpanm DBI;
 /usr/local/bin/cpanm Data::GUID;
 /usr/local/bin/cpanm Data::Serializer;

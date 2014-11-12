@@ -13,7 +13,7 @@ models:
   - object: Namespace::Picture				#model name
     many_to_many:							#define many to many relation 
      -  object: Namespace::Employee			#the join table
-        table: PictureXEmployee				#
+        table: PictureXEmployee	            #
         my_column: Picture_ID
         relationship_col: Employee_ID
         member: Employees					#member that variable contains list []

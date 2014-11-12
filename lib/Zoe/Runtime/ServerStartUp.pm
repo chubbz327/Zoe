@@ -1,5 +1,6 @@
-package Zoe::Runtime::ServerStarupUp;
+package Zoe::Runtime::ServerStartUp;
 use Mojo::Base 'Zoe::Runtime';
+use Zoe::Runtime::EnvironmentVariable;
 
 sub new
 {
@@ -11,11 +12,52 @@ sub new
         environment_variables   => [],    #foreign key in ServerStartUp join table
                
         mandatory_fields => [ 'application_name', 'location'],    #mandatory fields
+        types			=> 	{
+        						environment_variables => 'Zoe::Runtime::EnvironmentVariable',        	
+        					},
      
         %arg
     };
-    return bless $self, $class;
+    
+    #initialize children
+    $self = bless $self, $class;
+    #initialize serverstartup
+    
+    $self->initialize();
+    return $self; 
 }
+
+
+
+sub get_form_schema {
+	my $self = shift;
+	return {
+				type => 'object',
+	        	properties =>{
+		        	application_name => {
+		        		type => 'string',
+		        		title => 'Application name',
+		        		required => 'true',
+		        	},
+		        	location => {
+		        		type => 'string',
+		        		title => 'Application location',
+		        		required => 'true',
+		        	},
+		        	environment_variables => {
+		        		type => 'array',
+		        		title => 'Environment Variables',
+		        		required => 'false',
+		        		items =>Zoe::Runtime::EnvironmentVariable->new()->get_form_schema,
+		        	}
+		        		
+		            	
+	        }
+		
+	};
+}
+
+
 1;
 __DATA__
 

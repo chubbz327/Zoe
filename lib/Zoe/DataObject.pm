@@ -738,6 +738,7 @@ sub save {
 
 	#execute sql
 	debug( $cmd . "  :values " . join( ", ", @bind ), $is_verbose );
+	
     my $sth = $dbh->prepare($cmd);
     $dbh->{RaiseError} = 1;
     #warning  if @bind contains undef
@@ -768,8 +769,10 @@ sub save {
                     @collection =   @{ $self->{$member} } 
                       if ( @{ $self->{$member} } );
                     foreach my $obj (@collection) {
-                        $obj->{$column} = $self->get_primary_key_value();
-                        $obj->save();
+                    	
+                    	my $new_obj = $type->new($obj);
+                        $new_obj->{$column} = $self->get_primary_key_value();
+                        $new_obj->save();
                     }
                     debug( "$type ------- $member, ------, $column", $is_verbose );
                 };
