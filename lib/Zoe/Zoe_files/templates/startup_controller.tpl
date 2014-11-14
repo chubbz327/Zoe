@@ -28,6 +28,7 @@ use Mojo::Log;
 # This method will run once at server start
 sub startup {
     my $self = shift;
+    my %OBJECT_FOR_URL = ();
 
     #   Runtime
     #   Reads runtime.yml and return as Zoe::Runtime
@@ -107,7 +108,7 @@ sub startup {
             my $caller  = ( caller(1) )[3];
             my $message = __PACKAGE__ . ':' . $caller . ': ' . shift;
             my $logger  = $self->get_logger();
-            return $logger->$method($message);
+            return $logger->debug($message);
     
         }
     );
@@ -278,6 +279,7 @@ sub startup {
             	foreach my $model ( @{$site->{models} }) {
             		my $obj = $model->{name}->new();
             		
+            		
             		###show 
             		my $site_route = {};
             		$site_route->{method}=  'get';
@@ -286,7 +288,7 @@ sub startup {
             		$site_route->{name} = $site_name . '_show_' . $obj->get_object_name_short_hand;
             		$site_route->{controller} = 'Zoe::SiteController';
             		$site_route->{action} = 'show';  
-            		$site_route->{options => {type => $obj->{type} } };
+            		$site_route->{model} =  $obj->{TYPE} ;
             		push (@site_routes, $site_route);
                     
             		
@@ -298,7 +300,7 @@ sub startup {
             		$site_route->{name} = $site_name . '_show_all_' . $obj->get_object_name_short_hand;
             		$site_route->{controller} = 'Zoe::SiteController';
             		$site_route->{action} = 'show_all';  
-            		$site_route->{options => {type => $obj->{type} } };
+            		$site_route->{model} = $obj->{TYPE} ;
             		push (@site_routes, $site_route);
             	
                 }
@@ -320,6 +322,7 @@ sub startup {
             }
         }
 
+
         foreach my $route ( @list, @site_routes  ) {
             my $method     = $route->{method};
             my $path       = $route->{path};
@@ -328,19 +331,17 @@ sub startup {
             my $action     = $route->{action};
 
             
-            if ( defined ($route->{options}) ) {
-            	$r->$method($path)->name($name)
-                ->to( namespace => $controller, action => $action, %{ $route->{options} });
-            }else {
-            	$r->$method($path)->name($name)
-                ->to( namespace => $controller, action => $action );
-            }
+            
+            $r->$method($path)->name($name)
+                ->to( namespace => $controller, action => $action , __TYPE__ => $route->{model},);
 
         }
 
     }
 
+    
+  
     #__ROUTES__
-
+   
 }
 1;

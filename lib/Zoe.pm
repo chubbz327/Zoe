@@ -1207,6 +1207,8 @@ sub _write_routes {
 		$routes_code =~ s/\#__OBJECTROUTE__/$object_route/gmx;
 		$routes_code =~ s/\#__URLPREFIX__/$url_prefix/gmx;
 		$routes_code =~ s/\#__CONTROLLER__/$controller_name/gmx;
+		$routes_code =~ s/\#__OBJECTTYPE__/$object->{object}/gmx;
+		
 		$routes_yml .= $routes_code;
 	}
 	$routes_yml .= $end_route;

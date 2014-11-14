@@ -44,9 +44,7 @@ sub pass_to_handler {
               my $handler = $route->{handler};
               my $handler_method = $route->{handler_method};
              
-              Class::MOP::load_class($handler) or
-                 Mojo::Exception->throw("Could not require $handler");     
-              print Dumper @INC;
+              eval "use $handler"; 
                $self->log('debug', "Handler: $handler hanlder_method: $handler_method ");
               return ($handler->new()->$handler_method($self) );                
             }
@@ -57,6 +55,115 @@ sub pass_to_handler {
     $self->log('error', "No Handler found for $current_route");
     return;
 }
+sub _init {
+    my $self = shift;
+    my $type = $self->param('__TYPE__');
+    eval "use $type";    
+   
+    
+}
+
+
+
+
+
+
+my $limit   = $ENV{ZOE_DISPLAY_LIMIT} || 10;
+
+sub delete {
+    my $self    = shift;
+    my $message = 'CompassionRoads::Role deleted';
+  
+    $self->SUPER::delete( message => $message, 
+    object_action => '_delete');    
+    return;
+}
+sub search {
+    my $self        = shift;
+    my $template    =  'zoe/show_all';
+    my $limit       = 10;
+    
+    $self->SUPER::search( template => $template, limit => $limit );
+    return;      
+}
+
+sub show_all {
+    my $self    = shift;
+    my $template    =  'zoe/show_all';
+    my $limit       = 10;
+    $self->SUPER::show_all( template => $template, limit => $limit );
+    return; 
+}
+
+sub show {
+    my $self    = shift;
+    my $template    = 'zoe/show';
+    
+    $self->SUPER::show( template => $template, );
+    return;
+}
+
+
+
+sub create {
+    my $self    = shift;   
+
+    my $url     = $self->url_for(
+                                    $self->param('route_name')
+                                );       
+    $self->SUPER::create(  url => $url,);
+    return;
+
+}
+sub update {
+    my $self    = shift;   
+  
+    my $url     = $self->url_for(
+                                    $self->param('route_name')
+                                );       
+    $self->SUPER::update( url => $url);
+    return;
+}
+sub show_edit {
+    my $self    = shift; 
+    my %args    = @_;
+       
+    my $template= $args{template} || 'zoe/create_edit';
+    $self->SUPER::show_create_edit( template => $template, 
+            object_action => '_update');
+    return;
+}
+sub show_create {
+    my $self     = shift;
+    my %args    = @_;
+       
+    my $template= $args{template} ||  'zoe/create_edit';
+    $self->SUPER::show_create_edit( template => $template,  object_action => '_create');
+    return;
+}
+
+sub check_unique {
+    my $self = shift;
+    my $column  = $self->param('COLUMN');
+    my $value   = $self->param('VALUE');
+    my $type= $self->stach('__TYPE__');
+    
+    my $return = scalar( $type->find_by(where=>{$column => $value }) );
+    
+    $return = 0 unless ($value);
+    
+    
+    if ( $self->req->is_xhr ) {
+        $self->render( json => $return);
+    }
+    else {
+        $self->redirect_to($return);
+    }
+     
+}
+
+
+
 
   
     

@@ -10,8 +10,8 @@
 % $object_action = lc ($object_action);
 
 %== dumper %auth_object_info ;
-
-%my $url = url_for( $object_action , id=>$object->get_primary_key_value);
+% my $url = url_for( $object_action );
+% $url = url_for( $object_action , id=>$object->get_primary_key_value) if ($object->get_primary_key_value);
     
     <form   method='POST' action='<%= $url %>' 
             id='form_<%=$object->get_primary_key_value %>'

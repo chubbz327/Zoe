@@ -33,22 +33,29 @@ sub show_documentation {
 
 }
 
+	
+
 sub delete {
 	my $self    = shift;
 	my %args    = @_;
-	my $type    = $args{type};
-	my $message = $args{message};
+	my $type = my $__TYPE__     = $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+	eval "use $type";  
+	
+	my $message = $type . ' deleted';
 	my $url     = $args{url};
 
 	my $id     = $self->param('id');
 	my $object = $type->find($id);
 
 	$url = $self->_get_success($object) unless ($url);
+	
 	$object->delete();
+	
 	$self->flash( message => $message );
 
-	$self->redirect_to($url);
-	return;
+    return $self->render(json=>{success => 1}) if $self->req->is_xhr;
+	return $self->redirect_to($url);
+	
 }
 
 sub _get_short_name {
@@ -116,8 +123,10 @@ sub auth_create {
 sub create {
 	my $self    = shift;
 	my %args    = @_;
-	my $type    = $args{type};
-	my $message = $args{message};
+	my $type = my $__TYPE__     = $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+	eval "use $type";  
+	
+    my $message = $args{message} || "$type deleted";
 	my $object  = $type->new;
 	print Dumper $object;
 
@@ -131,7 +140,9 @@ sub create {
 
 	$self->flash( message => $message );
 
-	$self->redirect_to($url);
+	return $self->render(json=>{success => $object->get_primary_key_value }) if $self->req->is_xhr;
+     $self->redirect_to($url);
+     return;
 }
 
 sub _check_is_admin_or_self {
@@ -208,8 +219,9 @@ sub auth_update {
 sub update {
 	my $self    = shift;
 	my %args    = @_;
-	my $type    = $args{type};
-	my $message = $args{message};
+	my $type = my $__TYPE__     = $args{type}|| $self->param('__TYPE__') || $self->stash('__TYPE__');
+	eval "use $type";  
+    my $message = $args{message} || "$type updated";
 	my $id      = $self->param('id');
 	my $object  = $type->find($id);
 	my $url     = ( $args{url} || $self->_get_success($object) );
@@ -236,7 +248,7 @@ sub update {
 			$object        = $update_object;
 
 			$object->save;
-			$self->redirect_to($url);
+			
 
 		}
 		catch {
@@ -252,25 +264,34 @@ sub update {
 					error_msg => 'Bad current password'
 				]
 			);
+			return $self->render(json=>{success => 0, message => 'Bad current password' }) if $self->req->is_xhr;
 			$self->redirect_to($url);
 		};
 
 	}
 	else {
 		$object->save;
-		$self->redirect_to($url);
+		
 	}
 
-	return;
+	#return $self->render(json=>{success => ($object->get_primary_key_value )}) if $self->req->is_xhr;
+    return $self->redirect_to($url);
 }
 
 sub show_all {
 	my $self        = shift;
 	my %args        = @_;
 	my $render_json = $args{render_json};
-	my $type        = $args{type};
-	my $template    = $args{template};
-	my $limit       = $args{limit};
+	 
+    $self->log(Dumper ($self->req), 'debug');
+    print Dumper $self->req;
+    my $type = my $__TYPE__     = $args{type} || $self->param('__TYPE__')|| $self->stash('__TYPE__');
+    eval "use $type";  
+ 
+    print "TYPE $type\n";
+    
+	my $template    = $args{template} || 'zoe/show_all';
+	my $limit       = $args{limit} || $self->param('limit') || -1;
 
 	my $where       = $args{where} || {};
 	my $object      = $type->new;
@@ -307,9 +328,17 @@ sub show_all {
 		type        => $type,
 	);
 
-	return $self->render(
-		json => \%return,
-	) if ($render_json);
+	if ($self->req->is_xhr) {
+
+	#unbless objects -> turn into hash	
+	   foreach my $obj (@all) {
+            my %tmp_hash = %{ $obj};
+            $obj = \%tmp_hash;
+       
+        }
+		return $self->render( json => \@all ); 
+	}
+            
 
 	return $self->render(
 		%return
@@ -319,15 +348,20 @@ sub show_all {
 sub show {
 	my $self        = shift;
 	my %args        = @_;
-	my $type        = $args{type};
-	my $template    = $args{template};
+	my $type = my $__TYPE__         = $args{type} || $self->param('__TYPE__')|| $self->stash('__TYPE__');
+	eval "use $type";  
+	
+	 print "TYPE $type\n";
+	my $template    = $args{template} || 'zoe/show';
 	my $helper_opts = $args{helper_opts} || {};
 	my $id          = $self->param('id');
 
 	my $object = $type->find($id);
 	$layout = $args{layout} || $layout;
 
-	$self->render(
+    my %obj_hash = %{$object} ;
+    return $self->render(json =>\%obj_hash ) if $self->req->is_xhr;
+	return $self->render(
 		object      => $object,
 		template    => $template,
 		helper_opts => $helper_opts,
@@ -336,12 +370,36 @@ sub show {
 	);
 }
 
+sub show_create {
+	my $self = shift;
+	my %args = @_;
+	$args{object_action} = '_create';
+	
+	return $self->show_create_edit(%args);
+}
+
+sub show_edit {
+    my $self = shift;
+    my %args = @_;
+    $args{object_action} = '_update';
+    
+    return $self->show_create_edit(%args);
+}
+
+
 sub show_create_edit {
 	my $self          = shift;
+	    $self->log(Dumper ($self->req), 'debug');
+	    print Dumper $self->req;
 	my %args          = @_;
-	my $type          = $args{type};
-	my $template      = $args{template};
-	my $object_action = $args{object_action};
+	my $type = my $__TYPE__         = $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__'); 
+	eval "use $type";  
+	
+	 print "TYPE $type\n";
+	my $template      = $args{template} || 'zoe/create_edit';
+	my $object_action = $args{object_action} || $self->param('__OBJECTACTION__') || $self->stash('__OBJECTACTION__');
+	print Dumper $self->param;
+	print $object_action . "OBJECT ACTION\n\n\n";
 	my $id            = $self->param('id');
 	my $message       = $self->param('message') || '';
 	my $error_msg     = $self->param('error_msg') || '';
@@ -366,9 +424,12 @@ sub show_create_edit {
 sub search {
 	my $self        = shift;
 	my %args        = @_;
-	my $type        = $args{type};
-	my $template    = $args{template};
-	my $limit       = $args{limit};
+	my $type        = $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__'); 
+	eval "use $type";  
+	
+	
+	my $template    = $args{template} || 'zoe/show_all';
+	my $limit       = $args{limit} || 10;
 	my $where       = $args{where} || {};
 	my $object      = $type->new;
 	my $helper_opts = $args{helper_opts} || {};    #options to the helper
@@ -405,9 +466,24 @@ sub search {
 		where   => $where
 	);
 
+
+    if ($self->req->is_xhr) {
+
+    #unbless objects -> turn into hash  
+       foreach my $obj (@all) {
+            my %tmp_hash = %{ $obj};
+            $obj = \%tmp_hash;
+       
+        }
+        return $self->render(
+            json => \@all,
+        ) 
+    }
+    
+    
 	$layout = $args{layout} || $layout;
 	if (@args) {
-		$self->render(
+		return $self->render(
 			@_,
 			object      => $object,
 			limit       => $limit,
@@ -419,11 +495,12 @@ sub search {
 			template    => $template,
 			helper_opts => $helper_opts,
 			layout      => $layout,
+			type        => $type,
 			@args
 		);
 	}
 	else {
-		$self->render(
+		return $self->render(
 			@_,
 			object      => $object,
 			limit       => $limit,
@@ -435,6 +512,7 @@ sub search {
 			template    => $template,
 			helper_opts => $helper_opts,
 			layout      => $layout,
+			type         => $type,
 
 		);
 
@@ -520,6 +598,8 @@ sub _set_values_from_request_param {
 
 		my $method  = 'set_' . $member_name;
 		my $type    = $object->get_type_for_many_member($member_name);
+		eval "use $type";  
+		
 		my @id_list = $self->param($member_name);
 
 		$log->debug( "member_name $member_name" . Dumper @id_list );
@@ -537,6 +617,7 @@ sub _set_values_from_request_param {
 			}
 			else {                     #new object
 				my $type = $object->get_type_for_many_member($member_name);
+				eval "use $type";  
 				my %rel_column_info = $type->new()->get_column_info();
 
 				#id is a json string containing object values
