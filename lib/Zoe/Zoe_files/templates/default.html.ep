@@ -76,6 +76,12 @@
     
     <script src="/assets/js/jquery.validate.js"></script> 
 
+
+
+<!-- Rich text -->
+                        
+<script src="//tinymce.cachefly.net/4.1/tinymce.min.js"></script>
+<script>tinymce.init({selector:'textarea'});</script>
  <title><%= title %></title> 
 </head>
 

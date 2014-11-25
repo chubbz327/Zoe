@@ -328,21 +328,33 @@ sub show_all {
 		type        => $type,
 	);
 
-	if ($self->req->is_xhr) {
+	
 
 	#unbless objects -> turn into hash	
-	   foreach my $obj (@all) {
+	my @all_json = @all;
+	   foreach my $obj (@all_json) {
             my %tmp_hash = %{ $obj};
             $obj = \%tmp_hash;
        
         }
-		return $self->render( json => \@all ); 
-	}
-            
+       
+       
+    #return $self->render(json => \@all_json) if $self->accepts('json'); 
+    my $header = $self->req->headers->header('X-Requested-With');
 
-	return $self->render(
-		%return
+    
+    # AJAX request
+    if ($header && $header eq 'XMLHttpRequest') {
+    	return $self->render( json => \@all_json );
+    }
+	return $self->respond_to(
+	   json => sub { $self->render(json => \@all_json) }, 
+     html => \%return
 	);
+	
+	
+	#render( json => \@all ); 
+	 #$self->render(%return);
 }
 
 sub show {
@@ -390,7 +402,7 @@ sub show_edit {
 sub show_create_edit {
 	my $self          = shift;
 	    $self->log(Dumper ($self->req), 'debug');
-	    print Dumper $self->req;
+	   
 	my %args          = @_;
 	my $type = my $__TYPE__         = $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__'); 
 	eval "use $type";  
@@ -398,7 +410,7 @@ sub show_create_edit {
 	 print "TYPE $type\n";
 	my $template      = $args{template} || 'zoe/create_edit';
 	my $object_action = $args{object_action} || $self->param('__OBJECTACTION__') || $self->stash('__OBJECTACTION__');
-	print Dumper $self->param;
+	
 	print $object_action . "OBJECT ACTION\n\n\n";
 	my $id            = $self->param('id');
 	my $message       = $self->param('message') || '';
@@ -527,9 +539,9 @@ sub _get_success {
 	$success_path =~ s/\:\:/_/gmx;
 	$success_path .= '_show_all';
 
-	print Dumper $success_path;
+	
 
-	print "SUCESSPATH\n\n";
+	
 	my $url = $self->url_for($success_path);
 	return $url;
 }
@@ -563,7 +575,7 @@ sub _set_values_from_request_param {
 	my %column_info = $object->get_column_info();
 	my $log         = $self->get_logger('debug');
 
-	#print Dumper ( $self->req->params->to_hash );
+	
 
 	foreach my $column (@columns) {
 		my $input_type = $column_info{$column};
