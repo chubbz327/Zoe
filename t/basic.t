@@ -40,8 +40,10 @@ $tpl_content =~ s/\#__CWD__/$app_location/gmx;
 my $file = file( $cwd, 'test.yml' );
 write_file( $file, $tpl_content );
 
-$t->post_ok( '/upload', form => { 'file' => { file => "$file" } } )
-  ->status_is(200);
+Zoe->new()->generate_application(
+                application_config_file => [$file],
+                is_verbose              => 1
+            );
 
 
 my $generated_test = file($app_location, 'employee' , 't', '00.crud.t');

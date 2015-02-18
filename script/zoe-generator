@@ -31,7 +31,7 @@ foreach my $application_config_file ( @application_config_files) {
     unless ( -e $application_config_file );
 }
 
-Zoe->new->generate_application( application_config_file => \@application_config_files, 
+Zoe->new()->generate_application( application_config_file => \@application_config_files, 
           no_ddl => $no_ddl,
           is_verbose => $is_verbose,  
           replace => $do_replace_existing,
