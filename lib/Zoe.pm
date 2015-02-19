@@ -117,10 +117,23 @@ sub generate_application {
     my $self = shift;
     $self->zoe_init(@_);
     $self->generate_mojo_app();
-    $self->generate_db_yml();
+    #$self->generate_db_yml();
+    my $db_file_content ={};
+    $db_file_content->{database} = $application_description->[0]->{database};
+    my $db_type = $db_file_content->{database}->{type};
+    if ( $db_type =~ /sqlite/ ) {
+        my $db_file = $db_file_content->{database}->{dbfile};
+        my $toucher = File::Touch->new();
+        $toucher->touch($db_file);
+    }
+    
     $self->generate_mvc();
 
     #create runtime.yml
+    #create config directory under the mojo app location
+    my $dir = dir( $application_location, 'config' );
+    #make config dir under the mojo app
+    make_path( "" . $dir ) unless ( -d $dir );
 
     my $runtime_yml = file( $application_location, 'config', "runtime.yml" );
     if ( -e $runtime_yml ) {
@@ -150,7 +163,10 @@ sub generate_db_yml {
 
     #create config directory under the mojo app location
     my $dir = dir( $application_location, 'config' );
-
+    #make config dir under the mojo app
+    make_path( "" . $dir ) unless ( -d $dir );
+    
+    
     # read Database: hash_ref from applicaiton description file
     # and write to the db.yml file
     my $db_file_content = {};
@@ -164,8 +180,7 @@ sub generate_db_yml {
     YAML::Tiny::DumpFile( $db_yml_tmp, $db_file_content )
       or croak "Could not dump $db_yml_tmp: $! :" . YAML::Tiny->errstr;
 
-    #make config dir under the mojo app
-    make_path( "" . $dir ) unless ( -d $dir );
+    
 
     #copy the db.yml file
     copy( $db_yml_tmp, $dir );
@@ -201,7 +216,7 @@ sub zoe_init {
         foreach my $file (@application_files) {
             my $config = YAML::XS::LoadFile($file)
               or croak " YAML Parse error in $application_config_file"
-              . YAML::Tiny->errstr;
+              . $!;
 
             #print Dumper $config;
             my $tmp_ref;
@@ -307,7 +322,7 @@ sub _write_tests {
     my $test_show             = '';
     my $test_post             = '';
     my $test_dir              = dir( $application_location, 't' );
-    my $do = Zoe::DataObject->new( DBCONFIGFILE => $application_db_yml );
+    my $do = Zoe::DataObject->new( runtime=>$runtime );
     make_path("$test_dir")
       or croak "Could not create $test_dir"
       unless ( -d "$test_dir" );
@@ -398,7 +413,8 @@ qq^'foreign_key relationship between $object_name and $fk_type save'); ^;
         $find_by_pk_test_code .=
 qq^\$v_tmp = $object_name->find($variable_name->get_primary_key_value);\n^
           . qq^ok(\$v_tmp->get_primary_key_value == $variable_name->get_primary_key_value, \n\t^
-          . qq^'Find $object_name by primary_key ');\n^;
+          . qq^'Find $object_name by primary_key ');\n^
+          . qq^$variable_name = \$v_tmp ;^;
         $test_code =~ s/(\#__OBJECTCREATE__)/$1\n$create_new/gmx;
         my $object_url_base = "/" . $url_prefix . $object_route;
         my $show_url        = $object_url_base . '/';
@@ -410,7 +426,7 @@ qq^\$v_tmp = $object_name->find($variable_name->get_primary_key_value);\n^
           . qq^\$t->get_ok('$show_all_url')->status_is(200, \n^
           . qq^          "Found all $object_name via http get")\n;^;
         $test_post .=
-qq^post_data('$post_url' . $variable_name->get_primary_key_value, $variable_name);\n^;
+qq^ post_data('$post_url' . $variable_name->get_primary_key_value, $variable_name);\n^;
     }
     $test_code =~ s/\#__TESTUSELIST__/$test_use_list_string/gmx;
     $test_code =~ s/\#__SETFOREIGNKEYCODE__/$set_foreign_key_code/gmx;
@@ -1031,7 +1047,7 @@ sub _set_initial_values {
     my $sqla        = SQL::Abstract::More->new();
     my $db_yml_tmp  = file( './', 'db.yml' );
     my $objects_ref = shift;
-    my $do          = Zoe::DataObject->new( DBCONFIGFILE => $db_yml_tmp )
+    my $do          = Zoe::DataObject->new( runtime => $runtime )
       or die "$db_yml_tmp $!";
     my $application_DBH = $do->get_database_handle();
 
@@ -1079,7 +1095,7 @@ sub _do_create_ddl {
     my $columns         = shift;
     my $sqlBuilder      = SQL::Abstract->new( case => 'lower' );
     my $db_yml_tmp      = file( './', 'db.yml' );
-    my $do              = Zoe::DataObject->new( DBCONFIGFILE => $db_yml_tmp );
+    my $do              = Zoe::DataObject->new( runtime => $runtime );
     my $application_DBH = $do->get_database_handle();
     my ( $cmd, @bind );
 
@@ -1215,7 +1231,7 @@ sub _write_routes {
         msg( "Generating new $routes_file", $is_verbose );
     }
     $routes_yml .= "\n" unless ( $routes_yml =~ /\n\n$/sgm );
-    write_file( "$routes_file", $routes_yml ) or croak "$routes_file: $!";
+    #write_file( "$routes_file", $routes_yml ) or croak "$routes_file: $!";
 
     #add routes to Runtime
     my $routes = YAML::Tiny->read_string($routes_yml)

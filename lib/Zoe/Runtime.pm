@@ -82,7 +82,6 @@ sub initialize {
 	#then assign back to $self
 	foreach my $key ( keys( %{ $self->{types} } ) ) {
 		my $list_ref = [];
-		print "KEY$key\n";
 		my $obj_type = $self->{types}->{$key};
 		if ( ref( $self->{$key} ) eq 'ARRAY' ) {
 
@@ -100,8 +99,6 @@ sub initialize {
 			#top level object
 			my $obj_data = $self->{$key};
 
-			#print ref ($self->{$key}) . " $key\n\n";
-			print "object type $key\n";
 			$self->{$key} = $obj_type->new( %{$obj_data} ) if ($obj_data);
 			
 		}

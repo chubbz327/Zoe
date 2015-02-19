@@ -191,7 +191,7 @@ MAIN: {
 
 #2 Get database handle and confirm active
 
-    my $do  = Zoe::DataObject->new();
+    #my $do  = Zoe::DataObject->new();
     my $dbh = $do->get_database_handle();
     ok ($dbh->{Active},
         "->get_database_hande " . $do->{TYPE} );

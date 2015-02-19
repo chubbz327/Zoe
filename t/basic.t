@@ -48,7 +48,7 @@ Zoe->new()->generate_application(
 
 my $generated_test = file($app_location, 'employee' , 't', '00.crud.t');
  use Test::Harness;
-runtests( ["$generated_test"]);
+ runtests( ["$generated_test"]);
   
 #remove_tree("$app_location");
   

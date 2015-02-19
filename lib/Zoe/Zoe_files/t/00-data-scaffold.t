@@ -11,6 +11,7 @@ use Mojo::Asset::File;
 use DateTime;
 use DateTime::Format::DBI;
 
+$ENV{MOJO_LOG_LEVEL}="debug";
 
 my $v_tmp;    #temporary var used for comparison
 my $where;    #used for finds
@@ -91,7 +92,7 @@ $t->get_ok( '/#__URLPREFIX__', '#__APPLICATIONNAME__ is up' )
 sub post_data {
     my $url_string  = shift;
     my $object = shift;
-    my $do               = Zoe::DataObject->new();
+    #my $do               = Zoe::DataObject->new();
     my %has_many_value   = ();
     my $form             = {}; 
     my $random_string;

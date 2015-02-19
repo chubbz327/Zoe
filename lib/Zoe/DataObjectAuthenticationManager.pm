@@ -1,6 +1,5 @@
 package Zoe::DataObjectAuthenticationManager;
 use Mojo::Base -strict;
-use YAML::Tiny;
 use Net::LDAP;
 use Log::Message::Simple qw[msg error debug
   carp croak cluck confess];

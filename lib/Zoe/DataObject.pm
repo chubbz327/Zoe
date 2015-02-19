@@ -3,90 +3,116 @@ use strict;
 use warnings;
 my $is_verbose = 0;
 
+package Zoe::DataObject::Logger;
+use FindBin;
+
+use Mojo::Base 'Mojolicious';
+use Mojo::Log;
+use Path::Class;
+use Data::Dumper;
+use Env;
+
+
+sub debug
+{
+ my $log_file = file( "$FindBin::Bin", '..', 'log', $ENV{MOJO_MODE} . '.log' );
+ my $logger  = Mojo::Log->new( path=>"$log_file" ) or die "$!";
+ my $caller  = ( caller(1) )[3];
+ my $message = __PACKAGE__ . ':' . $caller . ': ' . shift;
+ my $method  = 'debug';
+
+  $logger->debug( $message) or die "could not write log $!";
+  
+}
+
 package Zoe::Connection;
 use Carp;
 use DBI;
 use Data::Dumper;
-use Log::Message::Simple qw[msg error debug];
+
+#use Log::Message::Simple qw[msg error debug];
 use FindBin;
-use YAML::Tiny;
 use strict;
 use warnings;
 
 my $singleton;
 my $DBTYPE = undef;
 
-sub new {
-    my @all_args    = @_;
-    my $type = shift (@all_args);
-    my %arg  = @all_args;
-    return $singleton if ($singleton);
-    my $self = {};
-    
-    #my $environment = ($ENV{ZOE_ENV} or 'development');
+sub new
+{
+ my @all_args = @_;
+ my $type     = shift(@all_args);
+ my %arg      = @all_args;
+ return $singleton if ($singleton);
+ my $self = {};
 
-    my ( $config, $dbfile, $host, $dbuser, $dbpassword, $dbname, $port, $runtime );
+ #my $environment = ($ENV{ZOE_ENV} or 'development');
 
-    #read config info from var
-    $self->{TYPE} = $type;
+ my ( $config, $dbfile, $host, $dbuser, $dbpassword, $dbname, $port, $runtime );
 
-    $runtime = $arg{runtime};
-    unless ( $runtime ) {
+ #read config info from var
+ $self->{TYPE} = $type;
 
-        #Read in config from param or use default
-        #config/db.yml file
-        $config = $arg{DBCONFIGFILE}
-          || "$FindBin::Bin/../config/db.yml";
-        confess "Could not read config file: $config" unless ( -e $config );
-        $runtime =  YAML::XS::LoadFile($config) or croak "malformed YAML: $config";
-    }
-    
+ $runtime = $arg{runtime};
+ unless ($runtime)
+ {
 
-    $host       = $runtime->{database}->{host};
-    $port       = $runtime->{database}->{port};
-    $dbuser     = $runtime->{database}->{dbuser};
-    $dbpassword = $runtime->{database}->{dbpassword};
-    $DBTYPE     = $runtime->{database}->{type};
-    $dbname     = $runtime->{database}->{dbname};
-    $dbfile     = $runtime->{database}->{dbfile};
-    $is_verbose = $runtime->{database}->{is_verbose} || 0;
+  #Read in config from param or use default
+  #config/db.yml file
+  $config = $arg{DBCONFIGFILE}
+    || "$FindBin::Bin/../config/db.yml";
+  confess "Could not read config file: $config" unless ( -e $config );
+  $runtime = YAML::XS::LoadFile($config) or croak "malformed YAML: $config";
+ }
 
-    my $dsn = undef;
+ $host       = $runtime->{database}->{host};
+ $port       = $runtime->{database}->{port};
+ $dbuser     = $runtime->{database}->{dbuser};
+ $dbpassword = $runtime->{database}->{dbpassword};
+ $DBTYPE     = $runtime->{database}->{type};
+ $dbname     = $runtime->{database}->{dbname};
+ $dbfile     = $runtime->{database}->{dbfile};
+ $is_verbose = $runtime->{database}->{is_verbose} || 0;
 
-    #mysql database connection
-    #if ( $DBTYPE eq 'mysql' ) {
-        
-    #}
+ my $dsn = undef;
 
-    #sqlite3 database connection
-    if ( $DBTYPE eq 'sqlite' ) {
-        croak "Database file: $dbfile does not exist"
-          unless ( -e $dbfile );
+ #mysql database connection
+ #if ( $DBTYPE eq 'mysql' ) {
 
-        $dsn = "dbi:SQLite:dbname=$dbfile";
-        $self->{DBH} = DBI->connect( $dsn, "", "" )
-          or confess "Can't connect to database: ", $DBI::errstr;
-    }
-    else {
-        $dsn = "DBI:$DBTYPE:database=$dbname;host=$host;port=$port";
-        $self->{DBH} = DBI->connect( $dsn, $dbuser, $dbpassword )
-          or confess "Can't connect to database: ", $DBI::errstr;
-    }
-    bless( $self, $type );
-    $singleton = $self;
-    return $self;
+ #}
+
+ #sqlite3 database connection
+ if ( $DBTYPE eq 'sqlite' )
+ {
+  croak "Database file: $dbfile does not exist"
+    unless ( -e $dbfile );
+
+  $dsn = "dbi:SQLite:dbname=$dbfile";
+  $self->{DBH} = DBI->connect( $dsn, "", "" )
+    or confess "Can't connect to database: ", $DBI::errstr;
+ } else
+ {
+  $dsn = "DBI:$DBTYPE:database=$dbname;host=$host;port=$port";
+  $self->{DBH} = DBI->connect( $dsn, $dbuser, $dbpassword )
+    or confess "Can't connect to database: ", $DBI::errstr;
+ }
+ bless( $self, $type );
+ $singleton = $self;
+ return $self;
 }
 
-sub get_DBH {
-    my $self = shift;
-    my $dbh  = $self->{DBH};
-    if ( ( defined($dbh) ) && ( $dbh->{Active} ) ) {
-        return $self->{DBH};
-    }
-    else {
-        return __PACKAGE__->new()->get_DBH();
-    }
-    return $dbh;
+sub get_DBH
+{
+ my $self = shift;
+ my $dbh  = $self->{DBH};
+ if ( ( defined($dbh) ) && ( $dbh->{Active} ) )
+ {
+  return $self->{DBH};
+ } else
+ {
+  return __PACKAGE__->new()->get_DBH();
+ }
+ return $dbh;
 }
 1;
 
@@ -98,112 +124,121 @@ use DBI;
 use Data::Dumper;
 use SQL::Abstract::More;
 
-use Log::Message::Simple qw[msg error debug];
+#use Log::Message::Simple qw[msg error debug];
 
 my ( $sql_builder, $DBConnection );
 
-sub get_database_handle {
-    my $self = shift;
-    return $self->{DBH};
+sub get_database_handle
+{
+ my $self = shift;
+ return $self->{DBH};
 }
 
-sub _delete_to_many {
-    my $self    = shift;
-    my $dbh     = $DBConnection->get_DBH();
-    my %sql     = %{ $self->{SQL} };
-	return unless $sql{MANYTOMANY};
-    my %to_many = %{ $sql{MANYTOMANY} };
-    my (%where);
+sub _delete_to_many
+{
+ my $self = shift;
+ my $dbh  = $DBConnection->get_DBH();
+ my %sql  = %{ $self->{SQL} };
+ return unless $sql{MANYTOMANY};
+ my %to_many = %{ $sql{MANYTOMANY} };
+ my (%where);
 
-    foreach my $object_name ( keys(%to_many) ) {
-        my @list = @{ $to_many{$object_name} };
-        for ( my $i = 0 ; $i <= $#list ; $i++ ) {
-            my %rel         = %{ $to_many{$object_name}->[$i] };
-            my $rel_table   = $rel{table};
-            my $my_col      = $rel{my_column};
-            my $rel_col     = $rel{relationship_col};
-            my $member      = $rel{member};
-            my $table_pkey  = $rel{table_primary_key} || 'ID';
-            my %rel_to_pkey = ();
+ foreach my $object_name ( keys(%to_many) )
+ {
+  my @list = @{ $to_many{$object_name} };
+  for ( my $i = 0 ; $i <= $#list ; $i++ )
+  {
+   my %rel         = %{ $to_many{$object_name}->[$i] };
+   my $rel_table   = $rel{table};
+   my $my_col      = $rel{my_column};
+   my $rel_col     = $rel{relationship_col};
+   my $member      = $rel{member};
+   my $table_pkey  = $rel{table_primary_key} || 'ID';
+   my %rel_to_pkey = ();
 
-            if ( $self->{$member} ) {
-                %rel_to_pkey = %{ $self->{$member} };
-            }
+   if ( $self->{$member} )
+   {
+    %rel_to_pkey = %{ $self->{$member} };
+   }
 
-            $where{$my_col} = $self->get_primary_key_value;
-            
-                    
-                    my ( $cmd, @bind ) =
-                      $sql_builder->delete( $rel_table, \%where );
-                    debug( "deleting MANYTOMANY for " . $self->{TYPE}, $is_verbose );
+   $where{$my_col} = $self->get_primary_key_value;
 
-                    debug( $cmd, $is_verbose );
-                    my $sth = $dbh->prepare($cmd);
-                    $sth->execute(@bind);
-                    
-                
-            
-          
-        }
-    }
-    return;
+   my ( $cmd, @bind ) = $sql_builder->delete( $rel_table, \%where );
+   Zoe::DataObject::Logger::Zoe::DataObject::Logger::debug(
+                                     "deleting MANYTOMANY for " . $self->{TYPE},
+                                     $is_verbose );
+
+   Zoe::DataObject::Logger::Zoe::DataObject::Logger::debug( $cmd, $is_verbose );
+   my $sth = $dbh->prepare($cmd);
+   $sth->execute(@bind);
+
+  }
+ }
+ return;
 }
 
-sub get_table_name {
-    my $self = shift;
-    my %sql  = %{ $self->{SQL} };
+sub get_table_name
+{
+ my $self = shift;
+ my %sql  = %{ $self->{SQL} };
 
-    #Build sql
-    my $table_name = $sql{'TABLE'};
-    
-    return $table_name; 
+ #Build sql
+ my $table_name = $sql{'TABLE'};
+
+ return $table_name;
 }
 
-sub delete {
-    my $self = shift;
-    my $dbh  = $DBConnection->get_DBH();
-    
-    my %sql  = %{ $self->{SQL} };
+sub delete
+{
+ my $self = shift;
+ my $dbh  = $DBConnection->get_DBH();
 
-    #Build sql
-    my $table_name = $sql{'TABLE'};
-    if ( $sql{HASMANY} ) {
-        my %has_many = %{ $sql{HASMANY} };
-        foreach my $type ( keys(%has_many) ) {
-            my @list = @{ $has_many{$type} };
+ my %sql = %{ $self->{SQL} };
 
-            for ( my $i = 0 ; $i <= $#list ; $i++ ) {
-                my %map = %{ $has_many{$type}->[$i] };
-                my ( $member, $column ) = each(%map);
-                eval {
-                    my @collection  = ();
-                    $self->_load_has_many(member=>$member);
-                    @collection = @{ $self->{$member} }
-                      if ( @{ $self->{$member} } );
-                    foreach my $obj (@collection) {
-                        $obj->{$column} = $self->get_primary_key_value();
-                        $obj->delete();
-                    }
-                    debug( "$type ------- $member, ------, $column", $is_verbose );
-                }; 
-                
-            }
-        }
-    }
-    my $cmd =
-        "delete from $table_name where "
-      . $sql{PRIMARYKEY} . "="
-      . $self->get_primary_key_value();
+ #Build sql
+ my $table_name = $sql{'TABLE'};
+ if ( $sql{HASMANY} )
+ {
+  my %has_many = %{ $sql{HASMANY} };
+  foreach my $type ( keys(%has_many) )
+  {
+   my @list = @{ $has_many{$type} };
 
-    debug( "$cmd", $is_verbose );
-    my $sth = $dbh->prepare($cmd);
-    $sth->execute();
-	
+   for ( my $i = 0 ; $i <= $#list ; $i++ )
+   {
+    my %map = %{ $has_many{$type}->[$i] };
+    my ( $member, $column ) = each(%map);
+    eval {
+     my @collection = ();
+     $self->_load_has_many( member => $member );
+     @collection = @{ $self->{$member} }
+       if ( @{ $self->{$member} } );
+     foreach my $obj (@collection)
+     {
+      $obj->{$column} = $self->get_primary_key_value();
+      $obj->delete();
+     }
+     Zoe::DataObject::Logger::Zoe::DataObject::Logger::debug(
+                                       "$type ------- $member, ------, $column",
+                                       $is_verbose );
+    };
 
-			$self->_delete_to_many;
+   }
+  }
+ }
+ my $cmd =
+     "delete from $table_name where "
+   . $sql{PRIMARYKEY} . "="
+   . $self->get_primary_key_value();
 
-    undef %{$self};
-    return;
+ Zoe::DataObject::Logger::debug( "$cmd", $is_verbose );
+ my $sth = $dbh->prepare($cmd);
+ $sth->execute();
+
+ $self->_delete_to_many;
+
+ undef %{$self};
+ return;
 }
 ############################################
 # Usage      : static method
@@ -213,576 +248,598 @@ sub delete {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub spawn {
-    return new(@_);  ## no critic
+sub spawn
+{
+ return new(@_);    ## no critic
 }
 ############################################
 # Usage      : constructor
-# Purpose    : create and add add methods to 
+# Purpose    : create and add add methods to
 #				new object instance
 # Returns    : new object
 # Parameters : n/a
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub new {
-    
-    my (
-        %arg,        #arguments
-        $type,       #object type
-        $connect,    #database connection
-    );
-    $type = shift;
 
-    #if  hash ref
-    ( ref( $_[0] ) eq 'HASH' ) ?    #
-      ( %arg = %{ shift() } and $arg{ $_[0] } = $_[1] )
-      :                             #the sql hash ref is stored
-                                    #in $_{0} key - $_{1} val
-                                    #after the shifts
-      ( %arg = @_ );
+my $connect;    #database connection
+my $logger;
+my $debug_fh;
 
-    #read the db config file out of arg
-    my %db_config_file;
+sub new
+{
 
-    if ( defined( $arg{DBCONFIGFILE} ) ) {
+ my (
+  %arg,         #arguments
+  $type,        #object type
 
-        $db_config_file{DBCONFIGFILE} = $arg{DBCONFIGFILE};
-        $connect = Zoe::Connection->new(%db_config_file);
+ );
+ $type = shift;
+
+ #if  hash ref
+ ( ( ref( $_[0] ) eq 'HASH' ) || ( @_ % 2 != 0 ) )
+   ?            # if called via super
+   ( %arg = %{ shift() } and $arg{ $_[0] } = $_[1] )
+   :            #the sql hash ref is stored
+                #in $_{0} key - $_{1} val
+                #after the shifts
+   ( %arg = @_ );
+
+ $connect = Zoe::Connection->new( runtime => $arg{runtime} ) unless ($connect);
+ 
+ my $self = {
+              TYPE => $type,
+              DBH  => $connect->get_DBH(),
+              ID   => undef,
+              %arg,
+ };
+ $self->{DBH} = $connect->{DBH};
+
+ $DBConnection = $connect;
+ $sql_builder  = SQL::Abstract::More->new;
+
+ # Dynamically generate accessor methods for child objects
+
+ #Set Utility Methods common to all instances
+
+ no strict 'refs';
+
+ if (    ( defined( $self->{SQL} ) )
+      && ( defined( $self->{SQL}->{PRIMARYKEY} ) ) )
+ {
+  my $get_primary_key_value = $type . '::get_primary_key_value';
+  my $set_primary_key_value = $type . '::set_primary_key_value';
+  my $get_primary_key_name  = $type . '::get_primary_key_name';
+  my $pkey_name             = $self->{SQL}->{PRIMARYKEY};
+  my $get                   = $type . '::get_' . $pkey_name;
+  my $set                   = $type . '::set_' . $pkey_name;
+
+  *{$get_primary_key_value} = sub {
+   my $self    = shift;
+   my $pk_name = $self->{SQL}->{PRIMARYKEY};
+   return $self->{$pk_name};
     }
-    else {
-        $connect = Zoe::Connection->new();
+    unless ( defined( &{$get_primary_key_value} ) );
+
+  *{$set_primary_key_value} = sub {
+   my $self    = shift;
+   my $pk_name = $self->{SQL}->{PRIMARYKEY};
+   $self->{$pk_name} = shift;
     }
+    unless ( defined( &{$set_primary_key_value} ) );
 
-    my $self = {
-        TYPE => $type,
-        DBH  => $connect->get_DBH(),
-        ID   => undef,
-        %arg,
-    };
-    $self->{DBH} = $connect->{DBH};
-    $DBConnection = $connect;
-    $sql_builder = SQL::Abstract::More->new;
-    	
-    # Dynamically generate accessor methods for child objects
+  *{$get_primary_key_name} = sub {
+   my $self    = shift;
+   my $pk_name = $self->{SQL}->{PRIMARYKEY};
+   return $pk_name;
+    }
+    unless ( defined( &{$get_primary_key_name} ) );
 
-    #Set Utility Methods common to all instances
-   
-     no strict 'refs';
+  *{$get} = sub {
+   my $self = shift;
+   return $self->get_primary_key_value();
 
-    if (   ( defined( $self->{SQL} ) )
-        && ( defined( $self->{SQL}->{PRIMARYKEY} ) ) )
+    }
+    unless ( defined( &{$get} ) );
+  *{$set} = sub {
+   my $self = shift;
+   $self->set_primary_key_value(@_);
+    }
+    unless ( defined( &{$set} ) );
+ }
+ if (    ( defined( $self->{SQL} ) )
+      && ( defined( $self->{SQL}->{COLUMNS} ) ) )
+ {
+
+  *{get_column_names} = sub {
+   my $self = shift;
+   my %sql  = %{ $self->{SQL} };
+   my @cols = @{ $sql{COLUMNS} };
+   return @cols;
+
+    }
+    unless ( defined( &{get_column_names} ) );
+
+  *{get_foreign_key_type} = sub {
+   my $self      = shift;
+   my $fk_column = shift;
+   return unless ( defined( $self->{SQL}->{FOREIGNKEY} ) );
+   my %fk = %{ $self->{SQL}->{FOREIGNKEY} };
+   return unless ( defined( $fk{$fk_column} ) );
+   my @return = keys( %{ $fk{$fk_column} } );
+   return $return[0];
+    }
+    unless ( defined( &{get_foreign_key_type} ) );
+
+  *{get_has_many_member_names} = sub {
+   my $self          = shift;
+   my %has_many_info = $self->get_has_many_info();
+   return keys(%has_many_info);
+    }
+    unless ( defined( &{get_has_many_member_names} ) );
+
+  *{get_many_to_many_member_names} = sub {
+   my $self      = shift;
+   my %many_info = $self->get_many_to_many_info();
+   return keys(%many_info);
+    }
+    unless ( defined( &{get_many_to_many_member_names} ) );
+
+  *{get_has_many_info} = sub {
+   my $self = shift;
+   return unless ( $self->{SQL}->{HASMANY} );
+
+   my %has_many = %{ $self->{SQL}->{HASMANY} };
+   my %return;
+   foreach my $type ( keys(%has_many) )
+   {
+    my @list = @{ $has_many{$type} };
+    for ( my $i = 0 ; $i <= $#list ; $i++ )
     {
-        my $get_primary_key_value = $type . '::get_primary_key_value';
-        my $set_primary_key_value = $type . '::set_primary_key_value';
-        my $get_primary_key_name  = $type . '::get_primary_key_name';
-        my $pkey_name             = $self->{SQL}->{PRIMARYKEY};
-        my $get                   = $type . '::get_' . $pkey_name;
-        my $set                   = $type . '::set_' . $pkey_name;
 
-        *{$get_primary_key_value} = sub {
-            my $self    = shift;
-            my $pk_name = $self->{SQL}->{PRIMARYKEY};
-            return $self->{$pk_name};
-          }
-          unless ( defined( &{$get_primary_key_value} ) );
+     my %description = %{ $list[$i] };
+     my ( $member, $fk_col ) = each %description;
 
-        *{$set_primary_key_value} = sub {
-            my $self    = shift;
-            my $pk_name = $self->{SQL}->{PRIMARYKEY};
-            $self->{$pk_name} = shift;
-          }
-          unless ( defined( &{$set_primary_key_value} ) );
-
-        *{$get_primary_key_name} = sub {
-            my $self    = shift;
-            my $pk_name = $self->{SQL}->{PRIMARYKEY};
-            return $pk_name;
-          }
-          unless ( defined( &{$get_primary_key_name} ) );
-
-        *{$get} = sub {
-            my $self = shift;
-            return $self->get_primary_key_value();
-
-          }
-          unless ( defined( &{$get} ) );
-        *{$set} = sub {
-            my $self = shift;
-            $self->set_primary_key_value(@_);
-          }
-          unless ( defined( &{$set} ) );
+     $return{$member} = $type;
     }
-    if (   ( defined( $self->{SQL} ) )
-        && ( defined( $self->{SQL}->{COLUMNS} ) ) )
+   }
+   return %return;
+    }
+    unless ( defined( &{get_has_many_info} ) );
+  *{get_many_to_many_info} = sub {
+   my $self = shift;
+   return unless ( $self->{SQL}->{MANYTOMANY} );
+   my %many = %{ $self->{SQL}->{MANYTOMANY} };
+   my %return;
+   foreach my $type ( keys(%many) )
+   {
+    my @list = @{ $many{$type} };
+    foreach my $many_description (@list)
     {
-        *{get_column_names} = sub {
-            my $self = shift;
-            my %sql  = %{ $self->{SQL} };
-            my @cols = @{ $sql{COLUMNS} };
-            return @cols;
-
-          }
-          unless ( defined( &{get_column_names} ) );
-
-        *{get_foreign_key_type} = sub {
-            my $self      = shift;
-            my $fk_column = shift;
-            return unless ( defined($self->{SQL}->{FOREIGNKEY}));
-            my %fk     = %{ $self->{SQL}->{FOREIGNKEY} };
-            return unless ( defined($fk{$fk_column}) );
-            my @return = keys( %{ $fk{$fk_column} } );
-            return $return[0];
-          }
-          unless ( defined( &{get_foreign_key_type} ) );
-
-        *{get_has_many_member_names} = sub {
-            my $self          = shift;
-            my %has_many_info = $self->get_has_many_info();
-            return keys(%has_many_info);
-          }
-          unless ( defined( &{get_has_many_member_names} ) );
-
-        *{get_many_to_many_member_names} = sub {
-            my $self      = shift;
-            my %many_info = $self->get_many_to_many_info();
-            return keys(%many_info);
-          }
-          unless ( defined( &{get_many_to_many_member_names} ) );
-
-        *{get_has_many_info} = sub {
-            my $self = shift;
-            return unless ( $self->{SQL}->{HASMANY} );
-
-            my %has_many = %{ $self->{SQL}->{HASMANY} };
-            my %return;
-            foreach my $type ( keys(%has_many) ) {
-                my @list = @{ $has_many{$type} };
-                for ( my $i = 0 ; $i <= $#list ; $i++ ) {
-                                      
-                    my %description =  %{$list[$i] }; 
-                    my ( $member, $fk_col ) = each %description;
-
-                   
-                    $return{$member} = $type;
-                }
-            }
-            return %return;
-          }
-          unless ( defined( &{get_has_many_info} ) );
-        *{get_many_to_many_info} = sub {
-            my $self = shift;
-            return unless ( $self->{SQL}->{MANYTOMANY} );
-            my %many = %{ $self->{SQL}->{MANYTOMANY} };
-            my %return;
-            foreach  my $type ( keys(%many) ) {
-                my @list = @{ $many{$type} };
-                foreach my $many_description (@list) {
-                    my $member = $many_description->{member};
-                    $return{$member} = $type;
-                }
-            }
-            return %return;
-          }
-          unless ( defined( &{get_many_to_many_info} ) );
-
-        *{get_object_type} = sub {
-            my $self = shift;
-            return $self->{TYPE};
-
-          }
-          unless ( defined( &{get_object_type} ) );
-
-        *{get_type_for_many_member} = sub {
-            my $self        = shift;
-            my $member_name = shift;
-
-            my %has_many     = $self->get_has_many_info();
-            
-            
-            my %many_to_many = $self->get_many_to_many_info();
-   
-            my %many = ( %many_to_many, %has_many );
-
-            return $many{$member_name}
-              if ( $many{$member_name} );
-          }
-          unless ( defined( &{get_type_for_many_member} ) );
-
-        *{get_member_for_column} = sub {
-            my $self       = shift;
-            my $column     = shift;
-            my $short_name = undef;
-            my $member     = undef;
-            my $fktype     = undef;
-
-            #$sql->{FOREIGNKEY}->{'TestObject1_ID'} = 'BFTG::DO::TestObject1';
-
-            my %fk = ();
-            %fk = %{ $self->{SQL}->{FOREIGNKEY} } if (defined ($self->{SQL}->{FOREIGNKEY} ));
-            foreach my $key ( keys(%fk) ) {
-
-                if ( $column eq $key ) {
-                    ( $type, $member ) = each( %{ $fk{$key} } );
-
-                }
-            }
-            return $member;
-          }
-          unless ( defined( &{get_member_for_column} ) );
+     my $member = $many_description->{member};
+     $return{$member} = $type;
     }
-
-    #
-    # Generate accessors for each column field
-    #
-
-    my @columns =();
-    @columns = @{ $self->{SQL}->{COLUMNS} }
-      if ( defined( $self->{SQL}->{COLUMNS} ) );
-    foreach my $col (@columns) {
-        my $get = "get_" . $col;
-        my $set = "set_" . $col;
-
-        *{$get} = sub {
-            my $self = shift;
-            return $self->{$col};
-
-          }
-          unless ( defined( &{$get} ) );
-        *{$set} = sub {
-            my $self = shift;
-            $self->{$col} = shift;
-          }
-          unless ( defined( &{$set} ) );
+   }
+   return %return;
     }
+    unless ( defined( &{get_many_to_many_info} ) );
 
-    # Generate the accessor methods for the fk relationship
-    if (   ( defined( $self->{SQL} ) )
-        && ( defined( $self->{SQL}->{FOREIGNKEY} ) ) )
+  *{get_object_type} = sub {
+   my $self = shift;
+   return $self->{TYPE};
+
+    }
+    unless ( defined( &{get_object_type} ) );
+
+  *{get_type_for_many_member} = sub {
+   my $self        = shift;
+   my $member_name = shift;
+
+   my %has_many = $self->get_has_many_info();
+
+   my %many_to_many = $self->get_many_to_many_info();
+
+   my %many = ( %many_to_many, %has_many );
+
+   return $many{$member_name}
+     if ( $many{$member_name} );
+    }
+    unless ( defined( &{get_type_for_many_member} ) );
+
+  *{get_member_for_column} = sub {
+   my $self       = shift;
+   my $column     = shift;
+   my $short_name = undef;
+   my $member     = undef;
+   my $fktype     = undef;
+
+   #$sql->{FOREIGNKEY}->{'TestObject1_ID'} = 'BFTG::DO::TestObject1';
+
+   my %fk = ();
+   %fk = %{ $self->{SQL}->{FOREIGNKEY} }
+     if ( defined( $self->{SQL}->{FOREIGNKEY} ) );
+   foreach my $key ( keys(%fk) )
+   {
+
+    if ( $column eq $key )
     {
-        my %foreign_key = %{ $self->{SQL}->{FOREIGNKEY} };
-        foreach my $column ( keys(%foreign_key) ) {
-            my ( $object_name, $member_name ) = %{ $foreign_key{$column} }
-              ;    #abreviated object name; the name after last::
-            my $object_abr = $object_name;
-            $object_abr =~ s/.*::(\w+)$/$1/;    #the name after last::
-            my $get_method = $type . '::' . 'get_' . $member_name;
-            my $set_method = $type . '::' . 'set_' . $member_name;
+     ( $type, $member ) = each( %{ $fk{$key} } );
 
-            # * denotes a method in perl symbol table
-            *{$get_method} = sub {
-                my $self = shift;
-                
-
-                my $fk_object;
-                $fk_object = $object_name->new()->load( $self->{$column} )
-                  if ( $self->{$column} );
-
-                return $fk_object;
-
-              }
-              unless ( defined( &{$get_method} ) );    
-            *{$set_method} = sub {
-                my ( $self, $object ) = @_;
-
-                if (   ( defined($object) )
-                    && ( defined( $object->get_primary_key_value() ) ) )
-                {
-
-                    $self->{$column} = $object->get_primary_key_value();
-                }
-                elsif ( defined($object) ) {
-                    carp "object of type $object_name must be saved prior to setting";
-                    $object->save;
-                    $self->{$column} = $object->get_primary_key_value();
-                    
-                    
-                }
-                else {    #passing undef removes relationship
-                    $self->{$column} = undef;
-                }
-              }
-              unless ( defined( &{$set_method} ) )
-              ;           #only make methods not already made
-            use strict;
-          
-        }
     }
-
-    #generate accessor methods for has Many
-    if (   ( defined( $self->{SQL} ) )
-        && ( defined( $self->{SQL}->{HASMANY} ) ) )
-    {
-        my %has_many = %{ $self->{SQL}->{HASMANY} };
-        foreach my $object_name ( keys(%has_many) ) {
-            my @list = @{ $has_many{$object_name} };
-            for ( my $i = 0 ; $i <= $#list ; $i++ ) {
-                my $object_abr = $object_name;
-                $object_abr =~ s/.*::(\w+)$/$1/;    #the name after last::
-                my ( $member, $column ) = %{ $has_many{$object_name}->[$i] };
-                my $get_method    = $type . '::' . 'get_' . $member;
-                my $set_method    = $type . '::' . 'set_' . $member;
-                my $remove_method = $type . '::' . 'remove_from_' . $member;
-                my $add_method    = $type . '::' . 'add_to_' . $member;
-
-                *{$get_method} = sub {
-                    my $self         = shift;
-                   
-                   
-                    unless( (defined($self->{$member} )) && (scalar (@{ $self->{$member} }) ) ) {
-                    $self->_load_has_many(member => $member)
-                   }
-                    return @{ $self->{$member} }
-                  }
-                  unless ( defined( &{$get_method} ) )
-                  ;    #only make methods not already made;
-                *{$set_method} = sub {
-                    my ( $self, $many_ref ) = @_;
-
-                    my @old_relationships =  ();
-                    @old_relationships = @{ $self->{$member} } if ( defined( $self->{$member}));
-                    my $remove            = 'remove_from_' . $member;
-                    foreach my $old (@old_relationships) {
-                        $self->$remove($old);
-
-                    }
-                    $self->{$member} = $many_ref;
-                  }
-                  unless ( defined( &{$set_method} ) )
-                  ;    #only make methods not already made
-                *{$add_method} = sub {
-                    my $self   = shift;
-                    my $object = shift;
-
-                    my @list = @{ $self->{$member} };
-                    push( @list, $object );
-                    $self->{$member} = \@list;
-
-                  }
-                  unless ( defined( &{$add_method} ) )
-                  ;    #only make methods not already made
-                *{$remove_method} = sub {
-                    my $self     = shift;
-                    my $object   = shift;
-                    my $abr_name = $self->{TYPE};
-                    $abr_name =~ s/.*::(\w+)$/$1/;
-                    my @list = @{ $self->{$member} };
-
-                    for ( my $i = 0 ; $i < scalar(@list) ; $i++ ) {
-                        my $item = $list[$i];
-                        if ( $item->get_primary_key_value() ==
-                            $object->get_primary_key_value() )
-                        {
-                            splice( @list, $i, $is_verbose );
-                            my $func = "set_" . $abr_name;
-                            $object->$func(undef);
-                            $object->save();
-                        }
-                    }
-                    $self->{$member} = \@list;
-                  }
-                  unless ( defined( &{$remove_method} ) )
-                  ;    #only make methods not already made
-            }
-        }
+   }
+   return $member;
     }
+    unless ( defined( &{get_member_for_column} ) );
+ }
 
-    #set accessors for many to many relationships
+ #
+ # Generate accessors for each column field
+ #
 
-    if (   ( defined( $self->{SQL} ) )
-        && ( defined( $self->{SQL}->{MANYTOMANY} ) ) )
+ my @columns = ();
+ @columns = @{ $self->{SQL}->{COLUMNS} }
+   if ( defined( $self->{SQL}->{COLUMNS} ) );
+ foreach my $col (@columns)
+ {
+  my $get = "get_" . $col;
+  my $set = "set_" . $col;
+
+  *{$get} = sub {
+   my $self = shift;
+   return $self->{$col};
+
+    }
+    unless ( defined( &{$get} ) );
+  *{$set} = sub {
+   my $self = shift;
+   $self->{$col} = shift;
+    }
+    unless ( defined( &{$set} ) );
+ }
+
+ # Generate the accessor methods for the fk relationship
+ if (    ( defined( $self->{SQL} ) )
+      && ( defined( $self->{SQL}->{FOREIGNKEY} ) ) )
+ {
+  my %foreign_key = %{ $self->{SQL}->{FOREIGNKEY} };
+  foreach my $column ( keys(%foreign_key) )
+  {
+   my ( $object_name, $member_name ) =
+     %{ $foreign_key{$column} };  #abreviated object name; the name after last::
+   my $object_abr = $object_name;
+   $object_abr =~ s/.*::(\w+)$/$1/;    #the name after last::
+   my $get_method = $type . '::' . 'get_' . $member_name;
+   my $set_method = $type . '::' . 'set_' . $member_name;
+
+   # * denotes a method in perl symbol table
+   *{$get_method} = sub {
+    my $self = shift;
+
+    my $fk_object;
+    $fk_object = $object_name->new()->load( $self->{$column} )
+      if ( $self->{$column} );
+
+    return $fk_object;
+
+     }
+     unless ( defined( &{$get_method} ) );
+   *{$set_method} = sub {
+    my ( $self, $object ) = @_;
+
+    if (    ( defined($object) )
+         && ( defined( $object->get_primary_key_value() ) ) )
     {
-        my %to_many = %{ $self->{SQL}->{MANYTOMANY} };
-        foreach my $object_name ( keys(%to_many) ) {
-            my @list = @{ $to_many{$object_name} };
 
-            for ( my $i = 0 ; $i <= $#list ; $i++ ) {
-                my $object_abr = $object_name;
-                $object_abr =~ s/.*::(\w+)$/$1/;    #the name after last::
-                    # my ($member, $column) = %{ $has_many{$object_name} };
-                my %rel        = %{ $to_many{$object_name}->[$i] };
-                my $rel_table  = $rel{table};
-                my $my_col     = $rel{my_column};
-                my $rel_col    = $rel{relationship_col};
-                my $member     = $rel{member};
-                my $table_pkey = $rel{table_primary_key} || 'ID';
+     $self->{$column} = $object->get_primary_key_value();
+    } elsif ( defined($object) )
+    {
+     carp "object of type $object_name must be saved prior to setting";
+     $object->save;
+     $self->{$column} = $object->get_primary_key_value();
 
-                my $get_method    = $type . '::' . 'get_' . $member;
-                my $set_method    = $type . '::' . 'set_' . $member;
-                my $remove_method = $type . '::' . 'remove_from_' . $member;
-                my $add_method    = $type . '::' . 'add_to_' . $member;
+    } else
+    {    #passing undef removes relationship
+     $self->{$column} = undef;
+    }
+     }
+     unless ( defined( &{$set_method} ) );   #only make methods not already made
+   use strict;
 
-                *{$get_method} = sub {
-                    my $self   = shift;
-                    
-                    unless ( scalar(keys ( %{ $self->{$member} } ))) {
-                        $self->_load_to_many(member=>$member);
-                    }
-                    my @pkeys  = keys( %{ $self->{$member} } );
-                    my @return = ();
-                    foreach my $pkey (@pkeys) {
-                        my $obj = $object_name->new()->load($pkey);
-                        push( @return, $obj );
-                    }
+  }
+ }
 
-                    return @return;
-                  }
-                  unless ( defined( &{$get_method} ) )
-                  ;    #only make methods not already made;
-                *{$set_method} = sub {
-                    my $self     = shift;
-                    my $many_ref = shift;
-                    my @objects  = @{$many_ref};
-                    return unless ( scalar(@objects) );
-                    my $object = $objects[0];
-                    my $dbh    = $DBConnection->get_DBH(); 
-                   # $dbh = $self->new()->{DBH} unless( (defined($dbh) ) && ( $dbh->{Active}) );
-                    my @list =
-                      @{ $self->{SQL}->{MANYTOMANY}->{ $object->get_object_type } };
+ #generate accessor methods for has Many
+ if (    ( defined( $self->{SQL} ) )
+      && ( defined( $self->{SQL}->{HASMANY} ) ) )
+ {
+  my %has_many = %{ $self->{SQL}->{HASMANY} };
+  foreach my $object_name ( keys(%has_many) )
+  {
+   my @list = @{ $has_many{$object_name} };
+   for ( my $i = 0 ; $i <= $#list ; $i++ )
+   {
+    my $object_abr = $object_name;
+    $object_abr =~ s/.*::(\w+)$/$1/;    #the name after last::
+    my ( $member, $column ) = %{ $has_many{$object_name}->[$i] };
+    my $get_method    = $type . '::' . 'get_' . $member;
+    my $set_method    = $type . '::' . 'set_' . $member;
+    my $remove_method = $type . '::' . 'remove_from_' . $member;
+    my $add_method    = $type . '::' . 'add_to_' . $member;
 
-                    for ( my $i = 0 ; $i <= $#list ; $i++ ) {
-                        my %rel =
-                          %{ $self->{SQL}->{MANYTOMANY}->{ $object->get_object_type }
-                              ->[$i] };
-                        my $rel_table = $rel{table};
-                        my $my_col    = $rel{my_column};
-                        debug(
+    *{$get_method} = sub {
+     my $self = shift;
+
+     unless (    ( defined( $self->{$member} ) )
+              && ( scalar( @{ $self->{$member} } ) ) )
+     {
+      $self->_load_has_many( member => $member );
+     }
+     return @{ $self->{$member} };
+      }
+      unless ( defined( &{$get_method} ) ); #only make methods not already made;
+    *{$set_method} = sub {
+     my ( $self, $many_ref ) = @_;
+
+     my @old_relationships = ();
+     @old_relationships = @{ $self->{$member} }
+       if ( defined( $self->{$member} ) );
+     my $remove = 'remove_from_' . $member;
+     foreach my $old (@old_relationships)
+     {
+      $self->$remove($old);
+
+     }
+     $self->{$member} = $many_ref;
+      }
+      unless ( defined( &{$set_method} ) );  #only make methods not already made
+    *{$add_method} = sub {
+     my $self   = shift;
+     my $object = shift;
+
+     my @list = @{ $self->{$member} };
+     push( @list, $object );
+     $self->{$member} = \@list;
+
+      }
+      unless ( defined( &{$add_method} ) );  #only make methods not already made
+    *{$remove_method} = sub {
+     my $self     = shift;
+     my $object   = shift;
+     my $abr_name = $self->{TYPE};
+     $abr_name =~ s/.*::(\w+)$/$1/;
+     my @list = @{ $self->{$member} };
+
+     for ( my $i = 0 ; $i < scalar(@list) ; $i++ )
+     {
+      my $item = $list[$i];
+      if ( $item->get_primary_key_value() == $object->get_primary_key_value() )
+      {
+       splice( @list, $i, $is_verbose );
+       my $func = "set_" . $abr_name;
+       $object->$func(undef);
+       $object->save();
+      }
+     }
+     $self->{$member} = \@list;
+      }
+      unless ( defined( &{$remove_method} ) )
+      ;    #only make methods not already made
+   }
+  }
+ }
+
+ #set accessors for many to many relationships
+
+ if (    ( defined( $self->{SQL} ) )
+      && ( defined( $self->{SQL}->{MANYTOMANY} ) ) )
+ {
+  my %to_many = %{ $self->{SQL}->{MANYTOMANY} };
+  foreach my $object_name ( keys(%to_many) )
+  {
+   my @list = @{ $to_many{$object_name} };
+
+   for ( my $i = 0 ; $i <= $#list ; $i++ )
+   {
+    my $object_abr = $object_name;
+    $object_abr =~ s/.*::(\w+)$/$1/;    #the name after last::
+        # my ($member, $column) = %{ $has_many{$object_name} };
+    my %rel        = %{ $to_many{$object_name}->[$i] };
+    my $rel_table  = $rel{table};
+    my $my_col     = $rel{my_column};
+    my $rel_col    = $rel{relationship_col};
+    my $member     = $rel{member};
+    my $table_pkey = $rel{table_primary_key} || 'ID';
+
+    my $get_method    = $type . '::' . 'get_' . $member;
+    my $set_method    = $type . '::' . 'set_' . $member;
+    my $remove_method = $type . '::' . 'remove_from_' . $member;
+    my $add_method    = $type . '::' . 'add_to_' . $member;
+
+    *{$get_method} = sub {
+     my $self = shift;
+
+     unless ( scalar( keys( %{ $self->{$member} } ) ) )
+     {
+      $self->_load_to_many( member => $member );
+     }
+     my @pkeys  = keys( %{ $self->{$member} } );
+     my @return = ();
+     foreach my $pkey (@pkeys)
+     {
+      my $obj = $object_name->new()->load($pkey);
+      push( @return, $obj );
+     }
+
+     return @return;
+      }
+      unless ( defined( &{$get_method} ) ); #only make methods not already made;
+    *{$set_method} = sub {
+     my $self     = shift;
+     my $many_ref = shift;
+     my @objects  = @{$many_ref};
+     return unless ( scalar(@objects) );
+     my $object = $objects[0];
+     my $dbh    = $DBConnection->get_DBH();
+
+   # $dbh = $self->new()->{DBH} unless( (defined($dbh) ) && ( $dbh->{Active}) );
+     my @list =
+       @{ $self->{SQL}->{MANYTOMANY}->{ $object->get_object_type } };
+
+     for ( my $i = 0 ; $i <= $#list ; $i++ )
+     {
+      my %rel =
+        %{ $self->{SQL}->{MANYTOMANY}->{ $object->get_object_type }->[$i] };
+      my $rel_table = $rel{table};
+      my $my_col    = $rel{my_column};
+      Zoe::DataObject::Logger::debug(
                             "Removing previous MANYTOMANY for " . $self->{TYPE},
-                            $is_verbose
-                        );
-                        if ($self->get_primary_key_value()) {
-                            my $delete_cmd =
-                              "delete from  $rel_table where $my_col = "
-                              . $self->get_primary_key_value();
-                            debug( $delete_cmd, $is_verbose );
-                            $dbh->do($delete_cmd);
-                        }
-                    }
-                    $self->{$member}->{ $object->get_primary_key_value } = [];
-                    foreach my $object (@objects) {
-                        $self->{$member}->{ $object->get_primary_key_value } =
-                          undef;
-                    }
-                  }
-                  unless ( defined( &{$set_method} ) )
-                  ;    #only make methods not already made
-                *{$add_method} = sub {
-                    my $self   = shift;
-                    my $object = shift;
-                    $self->{$member}->{ $object->get_primary_key_value } =
-                      undef;
-                  }
-                  unless ( defined( &{$add_method} ) )
-                  ;    #only make methods not already made
-                *{$remove_method} = sub {
-                    my $self     = shift;
-                    my $object   = shift;
-                    my $abr_name = $self->{TYPE};
-                    $abr_name =~ s/.*::(\w+)$/$1/;
-                    my %list = %{ $self->{$member} };
-                    delete( $list{ $object->get_primary_key_value() } );
+                            $is_verbose );
+      if ( $self->get_primary_key_value() )
+      {
+       my $delete_cmd =
+         "delete from  $rel_table where $my_col = "
+         . $self->get_primary_key_value();
+       Zoe::DataObject::Logger::debug( $delete_cmd, $is_verbose );
+       $dbh->do($delete_cmd);
+      }
+     }
+     $self->{$member}->{ $object->get_primary_key_value } = [];
+     foreach my $object (@objects)
+     {
+      $self->{$member}->{ $object->get_primary_key_value } = undef;
+     }
+      }
+      unless ( defined( &{$set_method} ) );  #only make methods not already made
+    *{$add_method} = sub {
+     my $self   = shift;
+     my $object = shift;
+     $self->{$member}->{ $object->get_primary_key_value } = undef;
+      }
+      unless ( defined( &{$add_method} ) );  #only make methods not already made
+    *{$remove_method} = sub {
+     my $self     = shift;
+     my $object   = shift;
+     my $abr_name = $self->{TYPE};
+     $abr_name =~ s/.*::(\w+)$/$1/;
+     my %list = %{ $self->{$member} };
+     delete( $list{ $object->get_primary_key_value() } );
 
-                    $self->_delete_to_many($object);
-                    $self->{$member} = \%list;
-                  }
-                  unless ( defined( &{$remove_method} ) )
-                  ;    #only make methods not already made
-            }
-        }
-    }
-    bless( $self, $type );
-    return $self;
+     $self->_delete_to_many($object);
+     $self->{$member} = \%list;
+      }
+      unless ( defined( &{$remove_method} ) )
+      ;    #only make methods not already made
+   }
+  }
+ }
+ bless( $self, $type );
+ return $self;
 }
 ############################################
 # Usage      : instance method
-# Purpose    : Used to persist object, sets 
-#				the primary key value on 
+# Purpose    : Used to persist object, sets
+#				the primary key value on
 #				newly created instances
 # Returns    : n/a
 # Parameters : n/a
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub save {
-    my $self = shift;
-    my $dbh  = $DBConnection->get_DBH();
-    #my $dbh    = $self->{DBH};
-    my %sql  = %{ $self->{SQL} };
-    my @columns = $self->get_column_names();
+sub save
+{
+ my $self = shift;
+ my $dbh  = $DBConnection->get_DBH();
 
-    #Build sql
-    my $table_name = $sql{'TABLE'};
-    my ( $cmd, @bind, %values, %where, );
-    my $pkey_name   = $self->get_primary_key_name();
-    my $sql_builder = $self->_get_sql_builder;
+ #my $dbh    = $self->{DBH};
+ my %sql     = %{ $self->{SQL} };
+ my @columns = $self->get_column_names();
 
-    debug( "Begin save: $table_name id: id", $is_verbose );
-    if ( $self->{$pkey_name} ) {
-		#update
-        debug( "Updating $table_name", $is_verbose );
-        foreach my $column (@columns) {
-            $values{$column} = $self->{$column};
-        }
-        $where{$pkey_name} = $self->get_primary_key_value;
-        ( $cmd, @bind ) =
-          $sql_builder->update( $table_name, \%values, \%where );
-    }
-    else {
-        #insert
-        debug( "Inserting $table_name", $is_verbose );
-        foreach my $column (@columns) {
-            $values{$column} = $self->{$column} if ( $self->{$column} );
-        }
-        ( $cmd, @bind ) = $sql_builder->insert( $table_name, \%values );
-    }
+ #Build sql
+ my $table_name = $sql{'TABLE'};
+ my ( $cmd, @bind, %values, %where, );
+ my $pkey_name   = $self->get_primary_key_name();
+ my $sql_builder = $self->_get_sql_builder;
 
-	#execute sql
-	debug( $cmd . "  :values " . join( ", ", @bind ), $is_verbose );
-	
-    my $sth = $dbh->prepare($cmd);
-    $dbh->{RaiseError} = 1;
-    #warning  if @bind contains undef
-    
-    $sth->execute(@bind);
-    
-    my $row_id = $dbh->last_insert_id( undef, undef, $table_name, undef );
-    debug( "Saved $row_id", $is_verbose );
-	
-	#if insert set primary key value
-    $self->set_primary_key_value($row_id)
-      unless ( $self->get_primary_key_value );
-    $sth->finish;
-	
-	#for each has many object, persist
-    debug( "Saving has many collections for $table_name", $is_verbose );
-    if ( $sql{HASMANY} ) {
-        my %has_many = %{ $sql{HASMANY} };
-        foreach my $type ( keys(%has_many) ) {
+ Zoe::DataObject::Logger::debug( "Begin save: $table_name id: id",
+                                 $is_verbose );
+ if ( $self->{$pkey_name} )
+ {
+  #update
+  Zoe::DataObject::Logger::debug( "Updating $table_name", $is_verbose );
+  foreach my $column (@columns)
+  {
+   $values{$column} = $self->{$column};
+  }
+  $where{$pkey_name} = $self->get_primary_key_value;
+  ( $cmd, @bind ) = $sql_builder->update( $table_name, \%values, \%where );
+ } else
+ {
+  #insert
+  Zoe::DataObject::Logger::debug( "Inserting $table_name", $is_verbose );
+  foreach my $column (@columns)
+  {
+   $values{$column} = $self->{$column} if ( $self->{$column} );
+  }
+  ( $cmd, @bind ) = $sql_builder->insert( $table_name, \%values );
+ }
 
-            my @list = @{ $has_many{$type} };
+ #execute sql
+ Zoe::DataObject::Logger::debug( $cmd . "  :values " . join( ", ", @bind ),
+                                 $is_verbose );
 
-            for ( my $i = 0 ; $i <= $#list ; $i++ ) {
-                my %map = %{ $has_many{$type}->[$i] };
-                my ( $member, $column ) = each(%map);
-                eval {
-                    my @collection = ();
-                    @collection =   @{ $self->{$member} } 
-                      if ( @{ $self->{$member} } );
-                    foreach my $obj (@collection) {
-                    	
-                    	my $new_obj = $type->new($obj);
-                        $new_obj->{$column} = $self->get_primary_key_value();
-                        $new_obj->save();
-                    }
-                    debug( "$type ------- $member, ------, $column", $is_verbose );
-                };
-            }
-        }
-    }
+ my $sth = $dbh->prepare($cmd);
+ $dbh->{RaiseError} = 1;
 
-    $self->_save_to_many() if ( $sql{MANYTOMANY} );
-    return $row_id;
+ #warning  if @bind contains undef
+
+ $sth->execute(@bind);
+
+ my $row_id = $dbh->last_insert_id( undef, undef, $table_name, undef );
+ Zoe::DataObject::Logger::debug( "Saved $row_id", $is_verbose );
+
+ #if insert set primary key value
+ $self->set_primary_key_value($row_id)
+   unless ( $self->get_primary_key_value );
+ $sth->finish;
+
+ #for each has many object, persist
+ Zoe::DataObject::Logger::debug( "Saving has many collections for $table_name",
+                                 $is_verbose );
+ if ( $sql{HASMANY} )
+ {
+  my %has_many = %{ $sql{HASMANY} };
+  foreach my $type ( keys(%has_many) )
+  {
+
+   my @list = @{ $has_many{$type} };
+
+   for ( my $i = 0 ; $i <= $#list ; $i++ )
+   {
+    my %map = %{ $has_many{$type}->[$i] };
+    my ( $member, $column ) = each(%map);
+    eval {
+     my @collection = ();
+     @collection = @{ $self->{$member} }
+       if ( ( @{ $self->{$member} } ) );
+     foreach my $obj (@collection)
+     {
+
+      my $new_obj = $type->new($obj);
+      $new_obj->{$column} = $self->get_primary_key_value();
+      $new_obj->save();
+      Zoe::DataObject::Logger::debug( "$type ------- $member, ------, $column",
+                                      $is_verbose );
+     }
+
+    };
+   }
+  }
+ }
+
+ $self->_save_to_many() if ( $sql{MANYTOMANY} );
+ return $row_id;
 }
+
 # Usage      : static method
 # Purpose    : static wrapper for load_all
 # Returns    : array
@@ -790,41 +847,47 @@ sub save {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub find_all {
-    my $type = shift;
-    return $type->new()->load_all(@_);
+sub find_all
+{
+ my $type = shift;
+ return $type->new()->load_all(@_);
 }
 
-sub split_search_string {
-    my $self = shift;
-    my $search_string = shift;
-    my @words = split(/\s+/, $search_string);
-    my @all_words;
-    my $i=0;
-    my $in_word = 0;
-    my $word;
-    
-     foreach $word (@words) {
-        if  ( $word =~ m/^("|')/  ) {
-            $in_word = 1;
-            $all_words[$i] = $word;
+sub split_search_string
+{
+ my $self          = shift;
+ my $search_string = shift;
+ my @words         = split( /\s+/, $search_string );
+ my @all_words;
+ my $i       = 0;
+ my $in_word = 0;
+ my $word;
 
-        }elsif ($in_word) {
-            $all_words[$i] .= " $word";
-        }elsif ($word =~/("|')$/) {
-            $all_words[$i] .= " $word";
-            $in_word = 0;
-            $i++;
-        }else {
-            $all_words[$i] = $word;
-            $i++;
-        }
+ foreach $word (@words)
+ {
+  if ( $word =~ m/^("|')/ )
+  {
+   $in_word = 1;
+   $all_words[$i] = $word;
 
-    }
+  } elsif ($in_word)
+  {
+   $all_words[$i] .= " $word";
+  } elsif ( $word =~ /("|')$/ )
+  {
+   $all_words[$i] .= " $word";
+   $in_word = 0;
+   $i++;
+  } else
+  {
+   $all_words[$i] = $word;
+   $i++;
+  }
 
-    return @all_words;
+ }
+
+ return @all_words;
 }
-
 
 # Usage      : sinstace
 # Purpose    : provides search ability on specified or all columns
@@ -833,60 +896,60 @@ sub split_search_string {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub search {
-    my $self = shift;
-    my %arg     = @_;
-    my $order   = $arg{order} || [];
-    my $limit   = $arg{limit};
-    my $offset  = $arg{offset} || 0;
-    my $where   = $arg{where}  || {};
-    my %sql     = %{ $self->{SQL} };
-    my @columns = @{ $arg{columns} };
-    
-    @columns  =  $self->get_column_names() unless(scalar(@columns));
-    
-    my %where = %{$where};
-    my @where;
+sub search
+{
+ my $self    = shift;
+ my %arg     = @_;
+ my $order   = $arg{order} || [];
+ my $limit   = $arg{limit};
+ my $offset  = $arg{offset} || 0;
+ my $where   = $arg{where} || {};
+ my %sql     = %{ $self->{SQL} };
+ my @columns = @{ $arg{columns} };
 
-    
-    my $search_string = $arg{search};
-    return $self->load_all(@_) unless($search_string);
-    my @all_words = $self->split_search_string($search_string);
-    
-     foreach my $column_name (@columns) {
-       foreach my $search_value ( @all_words) {
-           push(@where ,  (
-                        $column_name => {
-                                            'like',
-                                            '%' . $search_value . '%'
-                                        }
-                        ) );
-        }
-     }   
+ @columns = $self->get_column_names() unless ( scalar(@columns) );
 
+ my %where = %{$where};
+ my @where;
 
-    my $table_name = $sql{'TABLE'};
-    debug( "Searching $table_name for $search_string", $is_verbose );
-     
-  
-    my @clause = (
-            -and => [
-                $where,[
-                    -or => \@where,
-                ],
+ my $search_string = $arg{search};
+ return $self->load_all(@_) unless ($search_string);
+ my @all_words = $self->split_search_string($search_string);
+
+ foreach my $column_name (@columns)
+ {
+  foreach my $search_value (@all_words)
+  {
+   push(
+         @where,
+         (
+           $column_name => { 'like', '%' . $search_value . '%' }
+         )
+   );
+  }
+ }
+
+ my $table_name = $sql{'TABLE'};
+ Zoe::DataObject::Logger::debug( "Searching $table_name for $search_string",
+                                 $is_verbose );
+
+ my @clause = (
+  -and => [
+            $where,
+            [
+              -or => \@where,
             ],
-              
-           
-    
-     );
-    my %search_param =  (
-                            where => \@clause,
-                            order => $order,
-                            limit => $limit, 
-                            offset => $offset,
-                            
-                        );
-    return $self->load_all(%search_param);
+  ],
+
+ );
+ my %search_param = (
+  where  => \@clause,
+  order  => $order,
+  limit  => $limit,
+  offset => $offset,
+
+ );
+ return $self->load_all(%search_param);
 }
 
 ############################################
@@ -897,55 +960,64 @@ sub search {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub load_all {
-    my $self    = shift;
-    my %arg     = @_;    
-    
-    my $where   = $arg{where} || {};
-    my $order   = $arg{order} || [];
-    my $limit   = $arg{limit} || 0;
-    my $offset  = $arg{offset} || 0;
-    my $dbh     = $DBConnection->get_DBH();
-    my %sql     = %{ $self->{SQL} };
-    my @columns = $self->get_column_names();
-    my @return;
+sub load_all
+{
+ my $self = shift;
+ my %arg  = @_;
 
-    #Build sql
-    my $table_name = ( $arg{tables} || $sql{'TABLE'});
-    
-    my $prefix_table =  $sql{'TABLE'};
-    
-    foreach my $column_name (@columns) {
-        $column_name = $prefix_table . "." . $column_name . ' as ' . $column_name;
-    }
-    debug( "Loading All from $table_name", $is_verbose );
-    my $sql_builder = $self->_get_sql_builder;
-    
-    my ( $cmd, @bind );
-    
-    if ( $limit ) {  	
-    	( $cmd, @bind ) = $sql_builder->select(  -from =>$table_name, 
-                                                -columns =>\@columns,
-                                                -where   =>$where,
-                                                -limit   => $limit, 
-                                                -offset  => $offset,
-                                                -order_by => $order,
-                                                );
-    } else {
-    	( $cmd, @bind ) = $sql_builder->select(  -from =>$table_name, 
-                                                -columns =>\@columns,
-                                                -where   =>$where,
-                                                -order_by => $order,
-                                                );
-    }
+ my $where  = $arg{where}  || {};
+ my $order  = $arg{order}  || [];
+ my $limit  = $arg{limit}  || 0;
+ my $offset = $arg{offset} || 0;
+ my $dbh    = $DBConnection->get_DBH();
+ my %sql    = %{ $self->{SQL} };
+ my @columns = $self->get_column_names();
+ my @return;
 
-    debug( "SQL:: $cmd", $is_verbose );
-    my $sth = $dbh->prepare($cmd);
-    $sth->execute(@bind);
-    @return = $self->_load_from_result($sth);
-    print Dumper @return;
-    
-    return @return;
+ #Build sql
+ my $table_name = ( $arg{tables} || $sql{'TABLE'} );
+
+ my $prefix_table = $sql{'TABLE'};
+
+ foreach my $column_name (@columns)
+ {
+  $column_name = $prefix_table . "." . $column_name . ' as ' . $column_name;
+ }
+ Zoe::DataObject::Logger::debug( "Loading All from $table_name", $is_verbose );
+ my $sql_builder = $self->_get_sql_builder;
+
+ my ( $cmd, @bind );
+
+ if ($limit)
+ {
+  ( $cmd, @bind ) =
+    $sql_builder->select(
+                          -from     => $table_name,
+                          -columns  => \@columns,
+                          -where    => $where,
+                          -limit    => $limit,
+                          -offset   => $offset,
+                          -order_by => $order,
+    );
+ } else
+ {
+  ( $cmd, @bind ) =
+    $sql_builder->select(
+                          -from     => $table_name,
+                          -columns  => \@columns,
+                          -where    => $where,
+                          -order_by => $order,
+    );
+ }
+
+ Zoe::DataObject::Logger::debug( "SQL:: $cmd", $is_verbose );
+ my $sth = $dbh->prepare($cmd);
+ $sth->execute(@bind);
+ @return = $self->_load_from_result($sth);
+
+ # print Dumper @return;
+
+ return @return;
 }
 
 ############################################
@@ -959,34 +1031,40 @@ sub load_all {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub _load_fk {
-    my $self       = shift;
-    my %arg        = @_;
-    my %where      = %{ $arg{where} };
-    my $fk_obj     = $arg{object};
-    my $dbh        = $DBConnection->get_DBH();
-    my %sql        = %{ $self->{SQL} };
-    my @columns    = $self->get_column_names();
-    my $table_name = $sql{'TABLE'};
+sub _load_fk
+{
+ my $self       = shift;
+ my %arg        = @_;
+ my %where      = %{ $arg{where} };
+ my $fk_obj     = $arg{object};
+ my $dbh        = $DBConnection->get_DBH();
+ my %sql        = %{ $self->{SQL} };
+ my @columns    = $self->get_column_names();
+ my $table_name = $sql{'TABLE'};
 
-    debug( "Loading  from $table_name where " . join( "=", each(%where) ), $is_verbose );
-    my $sql_builder = $self->_get_sql_builder;
-    my ( $cmd, @bind ) =
-      $sql_builder->select( $table_name, \@columns, \%where );
-    my $sth = $dbh->prepare($cmd);
-    $sth->execute(@bind);
-    my @return;
-    while ( my $row = $sth->fetchrow_hashref() ) {
-        my $obj = $self->new();
-        foreach my $col ( keys( %{$row} ) ) {
-            $obj->{$col} = $row->{$col};
-        }
-        if ( $obj->{SQL}->{HASMANY} ) {
-          
-        }
-        push( @return, $obj );
-    }
-    return @return;
+ Zoe::DataObject::Logger::debug(
+                 "Loading  from $table_name where " . join( "=", each(%where) ),
+                 $is_verbose );
+ my $sql_builder = $self->_get_sql_builder;
+ my ( $cmd, @bind ) = $sql_builder->select( $table_name, \@columns, \%where );
+ my $sth = $dbh->prepare($cmd);
+ $sth->execute(@bind);
+ my @return;
+
+ while ( my $row = $sth->fetchrow_hashref() )
+ {
+  my $obj = $self->new();
+  foreach my $col ( keys( %{$row} ) )
+  {
+   $obj->{$col} = $row->{$col};
+  }
+  if ( $obj->{SQL}->{HASMANY} )
+  {
+
+  }
+  push( @return, $obj );
+ }
+ return @return;
 }
 
 ############################################
@@ -997,54 +1075,57 @@ sub _load_fk {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub _save_to_many {
-    my $self    = shift;
-    my $dbh     = $DBConnection->get_DBH();
-    my %sql     = %{ $self->{SQL} };
-    my %to_many = %{ $sql{MANYTOMANY} };
-    
+sub _save_to_many
+{
+ my $self    = shift;
+ my $dbh     = $DBConnection->get_DBH();
+ my %sql     = %{ $self->{SQL} };
+ my %to_many = %{ $sql{MANYTOMANY} };
 
-    foreach my $object_name ( keys(%to_many) ) {
-        my (%values);
-        my @list = @{ $to_many{$object_name} };
-        for ( my $i = 0 ; $i <= $#list ; $i++ ) {
-            my %rel         = %{ $to_many{$object_name}->[$i] };
-            my $rel_table   = $rel{table};
-            my $my_col      = $rel{my_column};
-            my $rel_col     = $rel{relationship_col};
-            my $member      = $rel{member};
-            my $table_pkey  = $rel{table_primary_key} || 'ID';
-            my %rel_to_pkey = ();
+ foreach my $object_name ( keys(%to_many) )
+ {
+  my (%values);
+  my @list = @{ $to_many{$object_name} };
+  for ( my $i = 0 ; $i <= $#list ; $i++ )
+  {
+   my %rel         = %{ $to_many{$object_name}->[$i] };
+   my $rel_table   = $rel{table};
+   my $my_col      = $rel{my_column};
+   my $rel_col     = $rel{relationship_col};
+   my $member      = $rel{member};
+   my $table_pkey  = $rel{table_primary_key} || 'ID';
+   my %rel_to_pkey = ();
 
-            if ( $self->{$member} ) {
-                %rel_to_pkey = %{ $self->{$member} };
-            }
+   if ( $self->{$member} )
+   {
+    %rel_to_pkey = %{ $self->{$member} };
+   }
 
-    
-            foreach my $rel_id ( keys(%rel_to_pkey) ) {
-                my $pkey = $rel_to_pkey{$rel_id};
+   foreach my $rel_id ( keys(%rel_to_pkey) )
+   {
+    my $pkey = $rel_to_pkey{$rel_id};
 
-                #create the relationship unless primary key exits
-                #in relationship table
-                unless ($pkey) {
-                    $values{$rel_col} = $rel_id;
-                    $values{$my_col}  = $self->get_primary_key_value;
-                    my ( $cmd, @bind ) =
-                      $sql_builder->insert( $rel_table, \%values );
-                    debug( "Saving MANYTOMANY for " . $self->{TYPE}, $is_verbose );
+    #create the relationship unless primary key exits
+    #in relationship table
+    unless ($pkey)
+    {
+     $values{$rel_col} = $rel_id;
+     $values{$my_col}  = $self->get_primary_key_value;
+     my ( $cmd, @bind ) = $sql_builder->insert( $rel_table, \%values );
+     Zoe::DataObject::Logger::debug( "Saving MANYTOMANY for " . $self->{TYPE},
+                                     $is_verbose );
 
-                    debug( $cmd, $is_verbose );
-                    my $sth = $dbh->prepare($cmd);
-                    $sth->execute(@bind);
-                    my $row_id =
-                      $dbh->last_insert_id( undef, undef, $rel_table, undef );
-                    $rel_to_pkey{$rel_id} = $row_id;
-                }
-            }
-            $self->{$member} = \%rel_to_pkey;
-        }
+     Zoe::DataObject::Logger::debug( $cmd, $is_verbose );
+     my $sth = $dbh->prepare($cmd);
+     $sth->execute(@bind);
+     my $row_id = $dbh->last_insert_id( undef, undef, $rel_table, undef );
+     $rel_to_pkey{$rel_id} = $row_id;
     }
-    return 1;
+   }
+   $self->{$member} = \%rel_to_pkey;
+  }
+ }
+ return 1;
 }
 ############################################
 # Usage      : private
@@ -1057,44 +1138,47 @@ sub _save_to_many {
 #				maps the related objects primary key to the primary
 #				key of the junction table
 # See Also   : n/a
-sub _load_to_many {
-    my $self = shift;
-    my %arg    = @_;
-    my $search_member = $arg{member};
-    my $dbh  = $DBConnection->get_DBH();
-    my %sql  = %{ $self->{SQL} };
-    return unless ( $sql{MANYTOMANY} );
-    my %to_many = %{ $sql{MANYTOMANY} };
-    foreach my $object_name ( keys(%to_many) ) {
+sub _load_to_many
+{
+ my $self          = shift;
+ my %arg           = @_;
+ my $search_member = $arg{member};
+ my $dbh           = $DBConnection->get_DBH();
+ my %sql           = %{ $self->{SQL} };
+ return unless ( $sql{MANYTOMANY} );
+ my %to_many = %{ $sql{MANYTOMANY} };
+ foreach my $object_name ( keys(%to_many) )
+ {
 
-        my @list = @{ $to_many{$object_name} };
+  my @list = @{ $to_many{$object_name} };
 
-        for ( my $i = 0 ; $i <= $#list ; $i++ ) {
-            my %rel        = %{ $to_many{$object_name}->[$i] };
-            my $rel_table  = $rel{table};
-            my $my_col     = $rel{my_column};
-            my $rel_col    = $rel{relationship_col};
-            my $member     = $rel{member};
-            my $table_pkey = $rel{table_primary_key} || 'ID';
-            
-            next unless ($search_member eq $member);
-            my %rel_to_id = ();
+  for ( my $i = 0 ; $i <= $#list ; $i++ )
+  {
+   my %rel        = %{ $to_many{$object_name}->[$i] };
+   my $rel_table  = $rel{table};
+   my $my_col     = $rel{my_column};
+   my $rel_col    = $rel{relationship_col};
+   my $member     = $rel{member};
+   my $table_pkey = $rel{table_primary_key} || 'ID';
 
-            my @columns = ( $rel_col, $table_pkey );
-            my %where = ( $my_col => $self->get_primary_key_value() );
-            my ( $cmd, @bind ) =
-              $sql_builder->select( $rel_table, \@columns, \%where );
+   next unless ( $search_member eq $member );
+   my %rel_to_id = ();
 
-            debug( $cmd, $is_verbose );
-            my $sth = $dbh->prepare($cmd);
-            $sth->execute(@bind);
-            while ( my @row = $sth->fetchrow_array() ) {
-                $rel_to_id{ $row[0] } = $row[1];
-            }
-            $self->{$member} = \%rel_to_id;
-        }
-    }
-    return;
+   my @columns = ( $rel_col, $table_pkey );
+   my %where = ( $my_col => $self->get_primary_key_value() );
+   my ( $cmd, @bind ) = $sql_builder->select( $rel_table, \@columns, \%where );
+
+   Zoe::DataObject::Logger::debug( $cmd, $is_verbose );
+   my $sth = $dbh->prepare($cmd);
+   $sth->execute(@bind);
+   while ( my @row = $sth->fetchrow_array() )
+   {
+    $rel_to_id{ $row[0] } = $row[1];
+   }
+   $self->{$member} = \%rel_to_id;
+  }
+ }
+ return;
 }
 ############################################
 # Usage      : instance method
@@ -1106,13 +1190,15 @@ sub _load_to_many {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub reload {
-    my $self = shift;
-    return $self->load( $self->get_primary_key_value() );
+sub reload
+{
+ my $self = shift;
+ return $self->load( $self->get_primary_key_value() );
 }
 
-sub _get_sql_builder {
-    return $sql_builder;
+sub _get_sql_builder
+{
+ return $sql_builder;
 }
 
 ############################################
@@ -1123,10 +1209,11 @@ sub _get_sql_builder {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub find {
-    my $type = shift;
-    my $id   = shift;
-    return $type->new()->load($id);
+sub find
+{
+ my $type = shift;
+ my $id   = shift;
+ return $type->new()->load($id);
 }
 ############################################
 # Usage      : instance method
@@ -1137,32 +1224,34 @@ sub find {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub load {
-    my $self = shift;
-    my $key  = shift;
-    return unless $key;
+sub load
+{
+ my $self = shift;
+ my $key  = shift;
+ return unless $key;
 
-    my $dbh     = $DBConnection->get_DBH();
-    my %sql     = %{ $self->{SQL} };
-    my @columns = $self->get_column_names();
-    my @return;
+ my $dbh     = $DBConnection->get_DBH();
+ my %sql     = %{ $self->{SQL} };
+ my @columns = $self->get_column_names();
+ my @return;
 
-    my %where;
-    $where{ $self->get_primary_key_name } = $key;
+ my %where;
+ $where{ $self->get_primary_key_name } = $key;
 
-    #Build sql
-    my $table_name = $sql{'TABLE'};
-    debug( "Loading  from $table_name where primary key is $key ", $is_verbose );
-    my $sql_builder = $self->_get_sql_builder;
-    my ( $cmd, @bind ) =
-      $sql_builder->select( $table_name, \@columns, \%where );
-    my $sth = $dbh->prepare($cmd);
-    $sth->execute(@bind);
-    @return = $self->_load_from_result($sth);
+ #Build sql
+ my $table_name = $sql{'TABLE'};
+ Zoe::DataObject::Logger::debug(
+                         "Loading  from $table_name where primary key is $key ",
+                         $is_verbose );
+ my $sql_builder = $self->_get_sql_builder;
+ my ( $cmd, @bind ) = $sql_builder->select( $table_name, \@columns, \%where );
+ my $sth = $dbh->prepare($cmd);
+ $sth->execute(@bind);
+ @return = $self->_load_from_result($sth);
 
-    #load any MANYTOMANY relationships that exist
-    #eval { $return[0]->_load_to_many() };
-    return $return[0];
+ #load any MANYTOMANY relationships that exist
+ #eval { $return[0]->_load_to_many() };
+ return $return[0];
 }
 
 ############################################
@@ -1174,17 +1263,18 @@ sub load {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : load_by
-sub find_by {
-    my $type = shift;
+sub find_by
+{
+ my $type = shift;
 
-    
-    return $type->new()->load_by(@_);
+ return $type->new()->load_by(@_);
 
 }
 
-sub load_by {
-    my $self    = shift;
-    return $self->load_all(@_);
+sub load_by
+{
+ my $self = shift;
+ return $self->load_all(@_);
 }
 
 ############################################
@@ -1196,57 +1286,65 @@ sub load_by {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub _load_from_result {
-    my $self 	= shift;
-    my $sth  	= shift;
-    my $obj;
-    $obj  	    = $self unless shift;
-    my %sql 	= %{ $obj->{SQL} };
-    my @return;
-	print Dumper $sth;
-    while ( my $row = $sth->fetchrow_hashref() ) {
-        my $obj = $self->new();
-        foreach my $col ( keys( %{$row} ) ) {
-            $obj->{$col} = $row->{$col};
-        }
-        if ( $obj->{SQL}->{HASMANY} ) {
-            
-        }
-        print Dumper $obj;
-        
-        push( @return, $obj );
-    }
-    return @return;
+sub _load_from_result
+{
+ my $self = shift;
+ my $sth  = shift;
+ my $obj;
+ $obj = $self unless shift;
+ my %sql = %{ $obj->{SQL} };
+ my @return;
+
+ #print Dumper $sth;
+ while ( my $row = $sth->fetchrow_hashref() )
+ {
+  my $obj = $self->new();
+  foreach my $col ( keys( %{$row} ) )
+  {
+   $obj->{$col} = $row->{$col};
+  }
+  if ( $obj->{SQL}->{HASMANY} )
+  {
+
+  }
+
+  #print Dumper $obj;
+
+  push( @return, $obj );
+ }
+ return @return;
 }
 
-sub _load_has_many {
-    my $self = shift;
-    my %arg = @_;
-    
-    my $obj     = $self;
-    my $search_member = $arg{member};
-    
-    my %obj_sql  = %{ $obj->{SQL} };
-    my %has_many = %{ $obj_sql{HASMANY} };
-    debug( 'Loading HASMANY for ' . $obj->{TYPE}, $is_verbose );
-    foreach my $type ( keys(%has_many) ) {
-        my @list = @{ $has_many{$type} };
+sub _load_has_many
+{
+ my $self = shift;
+ my %arg  = @_;
 
-        for ( my $i = 0 ; $i <= $#list ; $i++ ) {
-            my %map = %{ $has_many{$type}->[$i] };
-            my ( $member, $column ) = each(%map);
-            
-            next unless ($search_member eq $member);
-            my $child    = $type->new();
-            my $my_id = ($obj->get_primary_key_value || 0 );
-            my @children = $child->_load_fk(
-                where  => { $column => $my_id },
-                object => $obj
-            );
-            $obj->{$member} = \@children;
-        }
-    }
-    return;
+ my $obj           = $self;
+ my $search_member = $arg{member};
+
+ my %obj_sql  = %{ $obj->{SQL} };
+ my %has_many = %{ $obj_sql{HASMANY} };
+ Zoe::DataObject::Logger::debug( 'Loading HASMANY for ' . $obj->{TYPE},
+                                 $is_verbose );
+ foreach my $type ( keys(%has_many) )
+ {
+  my @list = @{ $has_many{$type} };
+
+  for ( my $i = 0 ; $i <= $#list ; $i++ )
+  {
+   my %map = %{ $has_many{$type}->[$i] };
+   my ( $member, $column ) = each(%map);
+
+   next unless ( $search_member eq $member );
+   my $child = $type->new();
+   my $my_id = ( $obj->get_primary_key_value || 0 );
+   my @children = $child->_load_fk( where  => { $column => $my_id },
+                                    object => $obj );
+   $obj->{$member} = \@children;
+  }
+ }
+ return;
 }
 
 ############################################
@@ -1258,24 +1356,26 @@ sub _load_has_many {
 # Throws     : no exceptions
 # Comments   : none
 # See Also   : n/a
-sub _execute {
-    my $self  = shift;
-    my $query = shift;
-    my $val   = shift;
-    my $dbh   = $DBConnection->get_DBH();
+sub _execute
+{
+ my $self  = shift;
+ my $query = shift;
+ my $val   = shift;
+ my $dbh   = $DBConnection->get_DBH();
 
-    my $sth = $dbh->prepare($query) or confess "$!";
+ my $sth = $dbh->prepare($query) or confess "$!";
 
-    #my @values 			= ($env);
-    debug( $query, $is_verbose );
-    if ($val) {
-        $sth->execute( @{$val} );
-    }
-    else {
-        $sth->execute();
-    }
+ #my @values 			= ($env);
+ Zoe::DataObject::Logger::debug( $query, $is_verbose );
+ if ($val)
+ {
+  $sth->execute( @{$val} );
+ } else
+ {
+  $sth->execute();
+ }
 
-    return $self->_load_from_result($sth);
+ return $self->_load_from_result($sth);
 }
 
 1;

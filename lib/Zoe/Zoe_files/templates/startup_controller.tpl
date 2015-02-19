@@ -12,12 +12,14 @@ use Zoe::AuthorizationManager;
 #custom helpers
 use Zoe::Helpers;
 use Zoe::DataObject;
-use YAML::Tiny;
+
 use File::Basename 'dirname';
 use Path::Class;
 use Carp;
 use Mojo::Log;
 
+#runtime
+my $runtime;
 
 ###############
 #Application models
@@ -49,7 +51,7 @@ sub startup {
         }
     );  
     
-    my $runtime =  $self->get_runtime();    
+    $runtime =  $self->get_runtime();    
 
     #environment variables
     #__ENVIRONMENTVAR__
@@ -62,13 +64,9 @@ sub startup {
         $ENV{ZOE_ENV} = ( $ENV{MOJO_MODE} or 'development' );
     }
 
-    #set the location for the db.yml file
-    #my $db_yml = file( dirname(__FILE__), '..', 'config', 'db.yml' );
-    #croak " Could not locate db.yml file: $db_yml" unless ( -e $db_yml );
-    #Zoe::DataObject->new( DBCONFIGFILE => $db_yml );
 
     
-    Zoe::DataObject->new( runtime => $runtime );    
+    Zoe::DataObject->new( runtime => $runtime, );    
     
 
     # Documentation browser under "/perldoc"
@@ -104,11 +102,13 @@ sub startup {
     $self->helper(
         log => sub {
             my $self    = shift;
-            my $method  = shift;
             my $caller  = ( caller(1) )[3];
             my $message = __PACKAGE__ . ':' . $caller . ': ' . shift;
+            my $method  = shift || 'debug';
+            
+            
             my $logger  = $self->get_logger();
-            return $logger->debug($message);
+            return $logger->$method($message);
     
         }
     );
@@ -117,16 +117,8 @@ sub startup {
     #   Read authorization file auth.yml return as hash
     $self->helper(
         get_auth_config => sub {
-            my $auth_yml =
-              file( dirname(__FILE__), '..', 'config', 'auth.yml' );
-            if ( -e $auth_yml ) {
-                my $auth_config = 0;
-                $auth_config = YAML::Tiny->read($auth_yml)
-                  or croak " YAML Parse error in $auth_yml";
-                return $auth_config->[0] || 0;
-            }
-
-            return 0;
+            
+            return $runtime->{authorization};
         }
     );
     
@@ -138,16 +130,7 @@ sub startup {
 #   Read paypal conf
     $self->helper(
         get_paypal_config => sub {
-            my $paypal_yml =
-              file( dirname(__FILE__), '..', 'config', 'paypal.yml' );
-            if ( -e $paypal_yml ) {
-                my $paypal_config = 0;
-                $paypal_config = YAML::Tiny->read($paypal_yml)
-                  or croak " YAML Parse error in $paypal_yml";
-                return $paypal_config->[0] || 0;
-            }
-
-            return 0;
+           return $runtime->{pay_pal};
         }
     );
 
@@ -274,7 +257,7 @@ sub startup {
             foreach my $site ( @{$runtime->{sites} } ){
             	my $site_name = $site->{name};
             	my $site_prefix = $site->{url_prefix};
-            	print Dumper ($site->{models});
+            	#print Dumper ($site->{models});
             	####default site routes created for every object reference####
             	foreach my $model ( @{$site->{models} }) {
             		my $obj = $model->{name}->new();

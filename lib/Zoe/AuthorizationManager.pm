@@ -1,5 +1,4 @@
 package Zoe::AuthorizationManager;
-use YAML::Tiny;
 use Mojo::Base -strict;
 use Data::Dumper;
 my $auth_config = 0;

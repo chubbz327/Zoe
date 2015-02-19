@@ -99,7 +99,6 @@ sub _set_global_values
     $primary_key_value = $object->get_primary_key_value() || '';
     $primary_key_name  = $object->get_primary_key_name();
     $object_to_string  = $object->to_string;
-    print "ORDER\n" . Dumper @order;
 }
 
 sub _get_route_name_for_object

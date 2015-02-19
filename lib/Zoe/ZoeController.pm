@@ -128,7 +128,7 @@ sub create {
 	
     my $message = $args{message} || "$type deleted";
 	my $object  = $type->new;
-	print Dumper $object;
+	#print Dumper $object;
 
 	my $url = ( $args{url} || $self->_get_success($object) );
 
@@ -160,7 +160,7 @@ sub _check_is_admin_or_self {
 
 	return 1 if ( $admin_role eq $current_role );
 
-	print "OBJECT ID $object_id == $current_user_id\n\n";
+ 
 	return 1 if ( $object_id == $current_user_id );
 	return 0;
 }
@@ -284,11 +284,11 @@ sub show_all {
 	my $render_json = $args{render_json};
 	 
     $self->log(Dumper ($self->req), 'debug');
-    print Dumper $self->req;
+     
     my $type = my $__TYPE__     = $args{type} || $self->param('__TYPE__')|| $self->stash('__TYPE__');
     eval "use $type";  
  
-    print "TYPE $type\n";
+  ;
     
 	my $template    = $args{template} || 'zoe/show_all';
 	my $limit       = $args{limit} || $self->param('limit') || -1;
@@ -362,8 +362,7 @@ sub show {
 	my %args        = @_;
 	my $type = my $__TYPE__         = $args{type} || $self->param('__TYPE__')|| $self->stash('__TYPE__');
 	eval "use $type";  
-	
-	 print "TYPE $type\n";
+	 
 	my $template    = $args{template} || 'zoe/show';
 	my $helper_opts = $args{helper_opts} || {};
 	my $id          = $self->param('id');
@@ -400,18 +399,16 @@ sub show_edit {
 
 
 sub show_create_edit {
-	my $self          = shift;
-	    $self->log(Dumper ($self->req), 'debug');
+	my $self          = shift; 
 	   
 	my %args          = @_;
 	my $type = my $__TYPE__         = $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__'); 
 	eval "use $type";  
-	
-	 print "TYPE $type\n";
+	 
 	my $template      = $args{template} || 'zoe/create_edit';
 	my $object_action = $args{object_action} || $self->param('__OBJECTACTION__') || $self->stash('__OBJECTACTION__');
 	
-	print $object_action . "OBJECT ACTION\n\n\n";
+ 
 	my $id            = $self->param('id');
 	my $message       = $self->param('message') || '';
 	my $error_msg     = $self->param('error_msg') || '';
@@ -637,7 +634,7 @@ sub _set_values_from_request_param {
 				foreach my $rel_column ( keys %{$values} ) {
 					my $rel_input_type = $rel_column_info{$rel_column};
 					next unless $rel_input_type;    # ignore empty entry json
-					print "$rel_input_type $rel_column\n\n ";
+					
 					if ( $rel_input_type eq 'file' ) {
 						my $rel_public_path =
 						  $self->_get_upload( $type->new(),
