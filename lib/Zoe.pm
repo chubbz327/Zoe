@@ -117,7 +117,7 @@ sub generate_application {
     my $self = shift;
     $self->zoe_init(@_);
     $self->generate_mojo_app();
-    #$self->generate_db_yml();
+   
     my $db_file_content ={};
     $db_file_content->{database} = $application_description->[0]->{database};
     my $db_type = $db_file_content->{database}->{type};
@@ -146,49 +146,7 @@ sub generate_application {
       or die "$!";
     print "VERSION " . $VERSION . "\n";
 }
-############################################
-# Usage      : private
-# Purpose    : Reads in then writes out the
-#		the database config options
-#		to config/db.yml
-# Returns    : n/a
-# Parameters : n/a
-# Throws     : no exceptions
-# Comments   : none
-# See Also   : n/a
-sub generate_db_yml {
-
-    # database config file stored temporarily in ../config
-    my $db_yml_tmp = file( './', 'db.yml' );
-
-    #create config directory under the mojo app location
-    my $dir = dir( $application_location, 'config' );
-    #make config dir under the mojo app
-    make_path( "" . $dir ) unless ( -d $dir );
-    
-    
-    # read Database: hash_ref from applicaiton description file
-    # and write to the db.yml file
-    my $db_file_content = {};
-    $db_file_content->{database} = $application_description->[0]->{database};
-    my $db_type = $db_file_content->{database}->{type};
-    if ( $db_type =~ /sqlite/ ) {
-        my $db_file = $db_file_content->{database}->{dbfile};
-        my $toucher = File::Touch->new();
-        $toucher->touch($db_file);
-    }
-    YAML::Tiny::DumpFile( $db_yml_tmp, $db_file_content )
-      or croak "Could not dump $db_yml_tmp: $! :" . YAML::Tiny->errstr;
-
-    
-
-    #copy the db.yml file
-    copy( $db_yml_tmp, $dir );
-    msg( "Wrote database config file to: $dir", $is_verbose );
-    $application_db_yml = file( $dir, 'db.yml' );
-    unlink($db_yml_tmp);
-    return;
-}
+ 
 ############################################
 # Usage      : private
 # Purpose    : Read arguments and set values
@@ -1191,6 +1149,8 @@ sub _write_routes {
       read_file( file( $ZOE_FILES, 'templates', 'additional_routes.tpl' ) );
     $additional_routes =~ s/\#__URLPREFIX__/$url_prefix/gmx;
     $routes_yml .= $additional_routes . "\n";
+    
+    
 
     foreach my $object ( @{$objects_ref} ) {
 
@@ -1198,7 +1158,7 @@ sub _write_routes {
         #hello::world will create  /hello/world
         my $object_name = $object->{object};
 
-        #$object_name =~ s/.*\:\:(\w+)$/$1/mx;
+
         $object_name =~ s/\:\:/_/gmx;
         my $object_route = $object->{object};
         $object_route =~ s/\:\:/\//g;
@@ -1221,26 +1181,18 @@ sub _write_routes {
     }
     $routes_yml .= $end_route;
     my $routes_file = file( $application_location, 'config', "routes.yml" );
-    if ( -e "$routes_file" ) {
-        msg( "Updating existing $routes_file", $is_verbose );
-        my $current_routes = read_file($routes_file);
-        $current_routes =~ s/$begin_route(.*)$end_route/$routes_yml/sgm;
-        $routes_yml = $current_routes;
-    }
-    else {
-        msg( "Generating new $routes_file", $is_verbose );
-    }
+
     $routes_yml .= "\n" unless ( $routes_yml =~ /\n\n$/sgm );
-    #write_file( "$routes_file", $routes_yml ) or croak "$routes_file: $!";
+    
 
     #add routes to Runtime
-    my $routes = YAML::Tiny->read_string($routes_yml)
-      or croak " YAML Parse error in \$routes_yml";
+    my $routes = YAML::XS::Load($routes_yml);
+    print Dumper $routes;
 
     #get routes from the sites section
-    $runtime->{routes} = $routes->[0];
+    $runtime->{routes} = $routes;
 
-    #print Dumper $routes;
+
 }
 
 sub _write_views {

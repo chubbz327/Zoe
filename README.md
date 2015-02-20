@@ -12,20 +12,11 @@ zoe-generator by the -app_file command argument.
 cpan> o conf prerequisites_policy follow
 cpan> o conf commit
 
-#install pre-reqs
-./prerequisites.sh
-perl Makefile.PL
-make 
-make test 
-sudo make install 
+#install via cpan
 
+$ tar -xzvf Zoe-VER.tar.gz; cd Zoe-VER; cpan -i .
 
 #Running 
-
-Fire up the web insterface via zoe daemon
-and point your web browser to http://localhost:3456
-
-OR
 
 zoe-generator --app_file <yaml application description>
 
