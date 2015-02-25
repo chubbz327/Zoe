@@ -1,12 +1,11 @@
 #!/usr/bin/env perl
-use v5.10;
+use v5.10;
 use Mojo::Base -strict;
 use Data::Dumper;
 use Test::More 'no_plan';
 use Test::Mojo;
 use FindBin;
 use List::MoreUtils qw(any);
-use Test::Mojo;
 use Mojo::Asset::File;
 use DateTime;
 use DateTime::Format::DBI;
@@ -85,9 +84,8 @@ $t->get_ok( '/#__URLPREFIX__', '#__APPLICATIONNAME__ is up' )
 #test find all and object by pkey via http
 #__TESTSHOW__
 
-#test update and create object
+#test update and create object
 #__TESTPOST__
-
 
 sub post_data {
     my $url_string  = shift;
@@ -103,7 +101,7 @@ sub post_data {
     my $pk_member        = $object->get_primary_key_name;
     my %column_info      = $object->get_column_info;
     
-        my $message = 'Created new ' . $object->get_object_type; 
+        my $message = 'Created new ' . $object->get_object_type; 
 
     foreach my $column_name (@columns) {
         if ( $pk_member eq $column_name ) {   #pk field set on update not create
@@ -123,12 +121,12 @@ sub post_data {
         elsif ($column_info{$column_name} =~ /file/i) {
                 my $file = Mojo::Asset::File->new->add_chunk('lalala'); 
                 $form->{$column_name}={file=>$file, filename=>'x'};
-                } elsif ( ($column_info{$column_name} =~ /^time.*/i  ) ||  ($column_info{$column_name} =~ /^date.*/i) ){
+                } elsif ( ($column_info{$column_name} =~ /^time.*/i  ) ||  ($column_info{$column_name} =~ /^date.*/i) ){
         
             my $db_parser = DateTime::Format::DBI->new( $object->get_database_handle() );
                     my $dt = DateTime->now();
-                    $random_string = $db_parser->format_datetime($dt);                     $form->{$column_name} = $random_string;
-        }                else {
+                    $random_string = $db_parser->format_datetime($dt);                     $form->{$column_name} = $random_string;
+        }                else {
              $random_string =  int(rand(10000)) ;
             $form->{$column_name} = $random_string;
         }
@@ -141,11 +139,13 @@ sub post_data {
          if(scalar (@list)) {
              my @ids = ($list[0]->get_primary_key_value);
              $form->{$member} = \@ids;
-         }               }
+         }               }
     
-        print "Posting to $url_string\n";
+        #print "Posting to $url_string\n";
     $t->post_ok($url_string  =>form =>$form)
-    ->status_is(302, $message . "\n $url_string");
+    ->status_is(302, $message . " $url_string");
     
 
 }
+
+0;

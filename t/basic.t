@@ -1,6 +1,6 @@
+#!/usr/bin/perl
 use Mojo::Base -strict;
-
-#use Test::More tests => 'no_plan';
+use Test::Harness qw (runtests execute_tests); 
 use Test::More 'no_plan';
 use Test::Mojo;
 my $cwd; #current working directory
@@ -25,7 +25,6 @@ BEGIN {
 
 my $t = Test::Mojo->new('Zoe') or die 'Could not start Zoe';
 $t->app->log->level('debug');
-$t->get_ok('/')->status_is(200)->content_like(qr/Zoe/i);
 
 #confirm that app generation works via post to the web interface
 my $tpl = file( $cwd, 'test.yml.tpl' );
@@ -40,16 +39,14 @@ $tpl_content =~ s/\#__CWD__/$app_location/gmx;
 my $file = file( $cwd, 'test.yml' );
 write_file( $file, $tpl_content );
 
-Zoe->new()->generate_application(
+my $output = Zoe->new()->generate_application(
                 application_config_file => [$file],
-                is_verbose              => 1
+                is_verbose              => 0
             );
 
 
 my $generated_test = file($app_location, 'employee' , 't', '00.crud.t');
- use Test::Harness;
- runtests( ["$generated_test"]);
-  
+runtests( ["$generated_test"]);
 #remove_tree("$app_location");
   
 #unlink($file);

@@ -1,10 +1,14 @@
-Zoe -  zoe-generator - Application Scaffolding for Mojolicious Framework
+Zoe - application generation via yaml description file
 
 #SYNOPSIS
+The purpose of Zoe, is to generate applications based on meta data. Applicaitons 
+are described via yaml description file. 
 
-The zoe-generator script generates Model, View, and Controller code for use with Mojolicious.  
-Object details, fields, table, relationships are defined in YAML in a file passed to 
-zoe-generator by the -app_file command argument.
+The zoe-generator script reads the description file and  generates :
+	1. Model, View, and Controller code 
+	2. RESTFul JSON webservices for models described
+	3. ORB for model persistance
+	4. Admin Web interface with authentication and authorization
 
 
 #INSTALL
@@ -19,6 +23,9 @@ $ tar -xzvf Zoe-VER.tar.gz; cd Zoe-VER; cpan -i .
 #Running 
 
 zoe-generator --app_file <yaml application description>
+
+#Anatomy of the Application Description File
+An example yaml is shown below
 
 1;
 

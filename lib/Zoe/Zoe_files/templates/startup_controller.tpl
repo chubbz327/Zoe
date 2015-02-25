@@ -240,8 +240,7 @@ sub startup {
                
     }
 
-    # Normal route to controller
-   # $r->any('/')->to('example#welcome');
+   
     $r->any('/#__URLPREFIX__')->to('zoe#welcome');
 
     #read routes from config
@@ -312,15 +311,29 @@ sub startup {
             my $name       = $route->{name};
             my $controller = $route->{controller};
             my $action     = $route->{action};
+            my $type 	   = $route->{type} || 0;
 
+            my $r = $self->routes;
             
             
             $r->$method($path)->name($name)
-                ->to( namespace => $controller, action => $action , __TYPE__ => $route->{model},);
+            	
+                ->to( namespace => $controller, action => $action , __TYPE__ => $type,);
+                
+#                $r = $r->under($path =>sub {
+#//                	my $c = shift;
+#//                	$c->stash('__TYPE__' => $type);
+#//                	return 1;
+#//                });
 
         }
 
     }
+    
+    #add route for portals
+    $r->any('/__PORTAL__/:__PORTAL__/:__PAGE__')->name('__handle_portal_request__')
+    	->to( namespace =>'ZoeController', action =>'handle_portal_request');
+    
 
     
   

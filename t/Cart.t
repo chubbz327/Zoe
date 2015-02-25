@@ -46,3 +46,4 @@ is($cart2->update_total, $cart->update_total, 'Serialization/Deserialization');
 $cart2->remove_from_cart(1);           
 
 is($cart2->update_total, 15, 'Serialization/Deserialization'); 
+1;

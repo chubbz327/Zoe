@@ -17,649 +17,735 @@ use Data::GUID;
 
 my $layout = 'zoe';
 
-sub show_documentation {
-	my $self = shift;
-	my $module = $self->param('module') || 'Zoe';
-	my $path =
-	  Pod::Simple::Search->new->find( $module, map { $_, "$_/pods" } @INC );
-	return $self->redirect_to("https://metacpan.org/pod/$module")
-	  unless $path && -r $path;
-	my $src = slurp $path;
-	my $doc = $self->pod_to_html($src);
-	return $self->render(
-		text   => "<div id='perldoc'> $doc</div>",
-		layout => $layout
-	);
+sub show_documentation
+{
+    my $self = shift;
+    my $module = $self->param('module') || 'Zoe';
+    my $path =
+      Pod::Simple::Search->new->find( $module, map { $_, "$_/pods" } @INC );
+    return $self->redirect_to("https://metacpan.org/pod/$module")
+      unless $path && -r $path;
+    my $src = slurp $path;
+    my $doc = $self->pod_to_html($src);
+    return
+      $self->render( text   => "<div id='perldoc'> $doc</div>",
+                     layout => $layout );
 
 }
 
-	
+sub delete
+{
+    my $self = shift;
+    my %args = @_;
+    my $type = my $__TYPE__ =
+      $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+    eval "use $type";
 
-sub delete {
-	my $self    = shift;
-	my %args    = @_;
-	my $type = my $__TYPE__     = $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
-	eval "use $type";  
-	
-	my $message = $type . ' deleted';
-	my $url     = $args{url};
+    my $url = $args{url} || $self->stash('__URL__');
+    my $message = $type . ' deleted';
 
-	my $id     = $self->param('id');
-	my $object = $type->find($id);
+    my $id     = $self->param('id');
+    my $object = $type->find($id);
 
-	$url = $self->_get_success($object) unless ($url);
-	
-	$object->delete();
-	
-	$self->flash( message => $message );
+    $url = $self->_get_success($object) unless ($url);
 
-    return $self->render(json=>{success => 1}) if $self->req->is_xhr;
-	return $self->redirect_to($url);
-	
-}
+    $object->delete();
 
-sub _get_short_name {
-	my $self = shift;
-	my $name = shift;
-	$name =~ s/.*\:\:(\w+)$/$1/gmx;
-	return $name;
-}
+    $self->flash( message => $message );
 
-sub log_not_authorized {
-	my $self = shift;
-
-	#get client request info
-	my $request_env = Dumper $self->req->env;
-	my $log         = $self->get_logger('secure');
-	my @params      = $self->param();
-	my %param_values;
-
-	foreach my $name (@params) {
-		$param_values{$name} = $self->param($name);
-	}
-	$log->error( __PACKAGE__
-		  . " Client IP: "
-		  . $self->tx->remote_address . "\nENV"
-		  . $request_env
-		  . "\nPARAMS:"
-		  . Dumper %param_values );
-	my $res = $self->tx->res;
-	$res->code(401);
-	$self->render( template => 'not_authorized' );
-
-	#say $res->to_string;
-
-	#get
-}
-
-sub auth_create {
-	my $self   = shift;
-	my $object = shift;
-	my $salt   = Data::GUID->new()->as_string;
-
-	my $auth_config    = $self->get_auth_config();
-	my $password_param = $auth_config->{login_password_param};
-	my $password       = $self->param($password_param);
-	my $password_hash  = sha1_hex( $salt . $password );
-
-	my %auth_info = %{ $auth_config->{config}->{data_object} };
-
-	my ( $salt_member, $password_member ) =
-	  ( $auth_info{salt_member}, $auth_info{password_member} );
-	$object->{$password_member} = $password_hash;
-	$object->{$salt_member}     = $salt;
-
-	if ( $self->param('user_session_member') ) {
-		my $user_session_member = $self->param('user_session_member');
-
-		$self->session( $auth_config->{user_session_key} =>
-			  $object->{$user_session_member} );
-
-	}
-	return $object;
+    return $self->render( json => { success => 1 } ) if $self->req->is_xhr;
+    return $self->redirect_to($url);
 
 }
 
-sub create {
-	my $self    = shift;
-	my %args    = @_;
-	my $type = my $__TYPE__     = $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
-	eval "use $type";  
-	
-    my $message = $args{message} || "$type deleted";
-	my $object  = $type->new;
-	#print Dumper $object;
-
-	my $url = ( $args{url} || $self->_get_success($object) );
-
-	$object = $self->_set_values_from_request_param($object);
-	if ( $object->is_auth_object() ) {
-		$object = $self->auth_create($object);
-	}
-	$object->save();
-
-	$self->flash( message => $message );
-
-	return $self->render(json=>{success => $object->get_primary_key_value }) if $self->req->is_xhr;
-     $self->redirect_to($url);
-     return;
+sub _get_short_name
+{
+    my $self = shift;
+    my $name = shift;
+    $name =~ s/.*\:\:(\w+)$/$1/gmx;
+    return $name;
 }
 
-sub _check_is_admin_or_self {
-	my $self         = shift;
-	my $object       = shift;
-	my $auth_config  = $self->get_auth_config();
-	my %auth_info    = %{ $auth_config->{config}->{data_object} };
-	my $object_id    = $object->get_primary_key_value();
-	my $current_role = $self->session( $auth_config->{role_session_key} ) || 0;
-	my $current_user_id = $self->session( $auth_config->{user_session_key} )
-	  || 0;
-	my $admin_role = $auth_info{admin_role};
+sub log_not_authorized
+{
+    my $self = shift;
 
-	return 1 if ( $admin_role eq '*' );
+    #get client request info
+    my $request_env = Dumper $self->req->env;
+    my $log         = $self->get_logger('secure');
+    my @params      = $self->param();
+    my %param_values;
 
-	return 1 if ( $admin_role eq $current_role );
-
- 
-	return 1 if ( $object_id == $current_user_id );
-	return 0;
+    foreach my $name (@params)
+    {
+        $param_values{$name} = $self->param($name);
+    }
+    $log->error(   __PACKAGE__
+                 . " Client IP: "
+                 . $self->tx->remote_address . "\nENV"
+                 . $request_env
+                 . "\nPARAMS:"
+                 . Dumper %param_values );
+    my $res = $self->tx->res;
+    $res->code(401);
+    $self->render( template => 'not_authorized' );
 }
 
-sub auth_update {
-	my $self   = shift;
-	my $object = shift;
+sub auth_create
+{
+    my $self   = shift;
+    my $object = shift;
+    my $salt   = Data::GUID->new()->as_string;
 
-	my $auth_config = $self->get_auth_config();
-	my %auth_info   = %{ $auth_config->{config}->{data_object} };
-	my ( $salt_member, $password_member ) =
-	  ( $auth_info{salt_member}, $auth_info{password_member} );
+    my $auth_config    = $self->get_auth_config();
+    my $password_param = $auth_config->{login_password_param};
+    my $password       = $self->param($password_param);
+    my $password_hash  = sha1_hex( $salt . $password );
 
-	#if password is not being updated just return
-	my $password = $self->param('password');
+    my %auth_info = %{ $auth_config->{config}->{data_object} };
 
-	return $object unless ($password);
+    my ( $salt_member, $password_member ) =
+      ( $auth_info{salt_member}, $auth_info{password_member} );
+    $object->{$password_member} = $password_hash;
+    $object->{$salt_member}     = $salt;
+
+    if ( $self->param('user_session_member') )
+    {
+        my $user_session_member = $self->param('user_session_member');
+
+        $self->session(
+             $auth_config->{user_session_key} => $object->{$user_session_member}
+        );
+
+    }
+    return $object;
+
+}
+
+sub create
+{
+    my $self = shift;
+    my %args = @_;
+    my $type = my $__TYPE__ =
+      $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+    eval "use $type";
+
+    my $message = $args{message} || "$type created";
+    my $object = $type->new();
+
+    #print Dumper $object;
+
+    my $url = ( $args{url} || $self->_get_success($object) );
+
+    $object = $self->_set_values_from_request_param($object);
+    if ( $object->is_auth_object() )
+    {
+        $object = $self->auth_create($object);
+    }
+    $object->save();
+
+    $self->flash( message => $message );
+
+    return $self->render(
+                         json => { success => $object->get_primary_key_value } )
+      if $self->req->is_xhr;
+    $self->redirect_to($url);
+    return;
+}
+
+sub _check_is_admin_or_self
+{
+    my $self         = shift;
+    my $object       = shift;
+    my $auth_config  = $self->get_auth_config();
+    my %auth_info    = %{ $auth_config->{config}->{data_object} };
+    my $object_id    = $object->get_primary_key_value();
+    my $current_role = $self->session( $auth_config->{role_session_key} ) || 0;
+    my $current_user_id = $self->session( $auth_config->{user_session_key} )
+      || 0;
+    my $admin_role = $auth_info{admin_role};
+
+    return 1 if ( $admin_role eq '*' );
+
+    return 1 if ( $admin_role eq $current_role );
+
+    return 1 if ( $object_id == $current_user_id );
+    return 0;
+}
+
+sub auth_update
+{
+    my $self   = shift;
+    my $object = shift;
+
+    my $auth_config = $self->get_auth_config();
+    my %auth_info   = %{ $auth_config->{config}->{data_object} };
+    my ( $salt_member, $password_member ) =
+      ( $auth_info{salt_member}, $auth_info{password_member} );
+
+    #if password is not being updated just return
+    my $password = $self->param('password');
+
+    return $object unless ($password);
 
    #make sure current user has rights to edit user or redirect_to not authorized
 
-	#get current user
+    #get current user
 
-	my $current_user;
-	if ( $self->session( $auth_config->{user_session_key} ) ) {
-		my $id = $self->session( $auth_config->{user_session_key} ) || 0;
-		$current_user = $object->find($id);
-	}
+    my $current_user;
+    if ( $self->session( $auth_config->{user_session_key} ) )
+    {
+        my $id = $self->session( $auth_config->{user_session_key} ) || 0;
+        $current_user = $object->find($id);
+    }
 
-	my $current_salt = $current_user->{$salt_member} || '';
-	my $old_password = $self->param('old_password')  || '';
-	my $old_password_hash = sha1_hex( $current_salt . $old_password );
+    my $current_salt = $current_user->{$salt_member} || '';
+    my $old_password = $self->param('old_password')  || '';
+    my $old_password_hash = sha1_hex( $current_salt . $old_password );
 
-	#get the current role
-	my $role_name = '';
-	if ( $self->session( $auth_config->{role_session_key} ) ) {
-		$role_name = $self->session( $auth_config->{role_session_key} ) || 0;
-	}
+    #get the current role
+    my $role_name = '';
+    if ( $self->session( $auth_config->{role_session_key} ) )
+    {
+        $role_name = $self->session( $auth_config->{role_session_key} ) || 0;
+    }
 
-	# if admin or if admin_role == *
-	my $admin_role = $auth_info{admin_role};
-	if (   ( $admin_role eq '*' )
-		|| ( $role_name eq $admin_role )
-		|| ( $current_user->get_password_hash eq $old_password_hash ) )
-	{
-		my $salt          = Data::GUID->new()->as_string;
-		my $password_hash = sha1_hex( $salt . $password );
+    # if admin or if admin_role == *
+    my $admin_role = $auth_info{admin_role};
+    if (    ( $admin_role eq '*' )
+         || ( $role_name eq $admin_role )
+         || ( $current_user->get_password_hash eq $old_password_hash ) )
+    {
+        my $salt          = Data::GUID->new()->as_string;
+        my $password_hash = sha1_hex( $salt . $password );
 
-		$object->{$password_member} = $password_hash;
-		$object->{$salt_member}     = $salt;
-		return $object;
-	}
+        $object->{$password_member} = $password_hash;
+        $object->{$salt_member}     = $salt;
+        return $object;
+    }
 
-	die Mojo::Exception->new('__BAD_CURRENT_PASSWORD__');
+    die Mojo::Exception->new('__BAD_CURRENT_PASSWORD__');
 }
 
-sub update {
-	my $self    = shift;
-	my %args    = @_;
-	my $type = my $__TYPE__     = $args{type}|| $self->param('__TYPE__') || $self->stash('__TYPE__');
-	eval "use $type";  
+sub update
+{
+    my $self = shift;
+    my %args = @_;
+    my $type = my $__TYPE__ =
+      $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+    eval "use $type";
     my $message = $args{message} || "$type updated";
-	my $id      = $self->param('id');
-	my $object  = $type->find($id);
-	my $url     = ( $args{url} || $self->_get_success($object) );
+    my $id      = $self->param('id');
+    my $object  = $type->find($id);
+    my $url     = ( $args{url} || $self->_get_success($object) );
 
-	$object = $self->_set_values_from_request_param($object);
-	my $update_object;
-	if ( $object->is_auth_object() ) {
+    $object = $self->_set_values_from_request_param($object);
+    my $update_object;
+    if ( $object->is_auth_object() )
+    {
 
-		#check if user is authorized to update
-		my $authorized = $self->_check_is_admin_or_self($object);
-		unless ($authorized) {
-			my $url = $self->url_for('__NOTAUTHORIZED__')->query(
-				[
-					object_id => $object->get_primary_key_value(),
-					path      => $self->url_for()
-				]
-			);
+        #check if user is authorized to update
+        my $authorized = $self->_check_is_admin_or_self($object);
+        unless ($authorized)
+        {
+            my $url = $self->url_for('__NOTAUTHORIZED__')->query(
+                               [
+                                 object_id => $object->get_primary_key_value(),
+                                 path      => $self->url_for()
+                               ]
+            );
 
-			$self->redirect_to($url);
-			return;
-		}
-		try {
-			$update_object = $self->auth_update($object);
-			$object        = $update_object;
+            $self->redirect_to($url);
+            return;
+        }
+        try
+        {
+            $update_object = $self->auth_update($object);
+            $object        = $update_object;
 
-			$object->save;
-			
+            $object->save;
 
-		}
-		catch {
+        }
+        catch
+        {
 
-			#bad current password_hash
-			my $redirect_to = $type;
-			$redirect_to =~ s/.*\:\:(\w+)$/$1/mx;
-			$redirect_to = lc($redirect_to);
-			$redirect_to .= '_show_edit';
-			my $url = $self->url_for($redirect_to)->query(
-				[
-					id        => $id,
-					error_msg => 'Bad current password'
-				]
-			);
-			return $self->render(json=>{success => 0, message => 'Bad current password' }) if $self->req->is_xhr;
-			$self->redirect_to($url);
-		};
+            #bad current password_hash
+            my $redirect_to = $type;
+            $redirect_to =~ s/.*\:\:(\w+)$/$1/mx;
+            $redirect_to = lc($redirect_to);
+            $redirect_to .= '_show_edit';
+            my $url = $self->url_for($redirect_to)->query(
+                                          [
+                                            id        => $id,
+                                            error_msg => 'Bad current password'
+                                          ]
+            );
+            return $self->render(
+                   json => { success => 0, message => 'Bad current password' } )
+              if $self->req->is_xhr;
+            $self->redirect_to($url);
+        };
 
-	}
-	else {
-		$object->save;
-		
-	}
+    } else
+    {
+        $object->save;
 
-	#return $self->render(json=>{success => ($object->get_primary_key_value )}) if $self->req->is_xhr;
+    }
+
+#return $self->render(json=>{success => ($object->get_primary_key_value )}) if $self->req->is_xhr;
     return $self->redirect_to($url);
 }
 
-sub show_all {
-	my $self        = shift;
-	my %args        = @_;
-	my $render_json = $args{render_json};
-	 
-    $self->log(Dumper ($self->req), 'debug');
-     
-    my $type = my $__TYPE__     = $args{type} || $self->param('__TYPE__')|| $self->stash('__TYPE__');
-    eval "use $type";  
- 
-  ;
-    
-	my $template    = $args{template} || 'zoe/show_all';
-	my $limit       = $args{limit} || $self->param('limit') || -1;
+sub show_all
+{
+    my $self        = shift;
+    my %args        = @_;
+    my $render_json = $args{render_json};
 
-	my $where       = $args{where} || {};
-	my $object      = $type->new;
-	my $helper_opts = $args{helper_opts} || {};
+    my $type = my $__TYPE__ =
+      $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+    eval "use $type";
 
-	my $order    = $self->param('order_by');
-	my $offset   = $self->param('offset') || 0;
-	my $order_by = [];
-	if ($order) {
-		$order_by = [$order];
-	}
-	my $count = scalar( $type->find_all( where => $where ) );
-	my @all = $type->find_all(
-		order  => $order_by,
-		limit  => $limit,
-		offset => $offset,
-		where  => $where
-	);
+    my $template = $args{template} || 'zoe/show_all';
+    my $limit = $args{limit} || $self->param('limit') || -1;
 
-	my $search;
+    my $where       = $args{where} || {};
+    my $object      = $type->new;
+    my $helper_opts = $args{helper_opts} || {};
 
-	$layout = $args{layout} || $layout;
-	my %return = (
-		search      => $search,
-		object      => $object,
-		limit       => $limit,
-		count       => $count,
-		offset      => $offset,
-		order_by    => $order,
-		all         => \@all,
-		template    => $template,
-		helper_opts => $helper_opts,
-		layout      => $layout,
-		type        => $type,
-	);
-
-	
-
-	#unbless objects -> turn into hash	
-	my @all_json = @all;
-	   foreach my $obj (@all_json) {
-            my %tmp_hash = %{ $obj};
-            $obj = \%tmp_hash;
-       
-        }
-       
-       
-    #return $self->render(json => \@all_json) if $self->accepts('json'); 
-    my $header = $self->req->headers->header('X-Requested-With');
-
-    
-    # AJAX request
-    if ($header && $header eq 'XMLHttpRequest') {
-    	return $self->render( json => \@all_json );
+    my $order    = $self->param('order_by');
+    my $offset   = $self->param('offset') || 0;
+    my $order_by = [];
+    if ($order)
+    {
+        $order_by = [$order];
     }
-	return $self->respond_to(
-	   json => sub { $self->render(json => \@all_json) }, 
-     html => \%return
-	);
-	
-	
-	#render( json => \@all ); 
-	 #$self->render(%return);
+    my $count = scalar( $type->find_all( where => $where ) );
+    my @all = $type->find_all(
+                               order  => $order_by,
+                               limit  => $limit,
+                               offset => $offset,
+                               where  => $where
+    );
+
+    my $search;
+
+    $layout = $args{layout} || $layout;
+    my %return = (
+                   search      => $search,
+                   object      => $object,
+                   limit       => $limit,
+                   count       => $count,
+                   offset      => $offset,
+                   order_by    => $order,
+                   all         => \@all,
+                   template    => $template,
+                   helper_opts => $helper_opts,
+                   layout      => $layout,
+                   type        => $type,
+    );
+
+    #unbless objects -> turn into hash
+    my @all_json = @all;
+    foreach my $obj (@all_json)
+    {
+        my %tmp_hash = %{$obj};
+        $obj = \%tmp_hash;
+
+    }
+
+    return $self->render( json => \@all_json ) if $self->req->is_xhr;
+
+    #my $header = $self->req->headers->header('X-Requested-With');
+
+    # AJAX request
+    #    if ( $header && $header eq 'XMLHttpRequest' )
+    #    {
+    #        return $self->render( json => \@all_json );
+    #    }
+
+  #    return
+  #      $self->respond_to( json => sub { $self->render( json => \@all_json ) },
+  #                         html => \%return );
+
+    #render( json => \@all );
+    #print Dumper %return;
+
+    return
+      $self->render(
+                     search      => $search,
+                     object      => $object,
+                     limit       => $limit,
+                     count       => $count,
+                     offset      => $offset,
+                     order_by    => $order,
+                     all         => \@all,
+                     template    => $template,
+                     helper_opts => $helper_opts,
+                     layout      => $layout,
+                     type        => $type,
+      ) or die "$!";
 }
 
-sub show {
-	my $self        = shift;
-	my %args        = @_;
-	my $type = my $__TYPE__         = $args{type} || $self->param('__TYPE__')|| $self->stash('__TYPE__');
-	eval "use $type";  
-	 
-	my $template    = $args{template} || 'zoe/show';
-	my $helper_opts = $args{helper_opts} || {};
-	my $id          = $self->param('id');
-
-	my $object = $type->find($id);
-	$layout = $args{layout} || $layout;
-
-    my %obj_hash = %{$object} ;
-    return $self->render(json =>\%obj_hash ) if $self->req->is_xhr;
-	return $self->render(
-		object      => $object,
-		template    => $template,
-		helper_opts => $helper_opts,
-		layout      => $layout,
-		type        => $type,
-	);
-}
-
-sub show_create {
-	my $self = shift;
-	my %args = @_;
-	$args{object_action} = '_create';
-	
-	return $self->show_create_edit(%args);
-}
-
-sub show_edit {
+sub show
+{
     my $self = shift;
     my %args = @_;
-    $args{object_action} = '_update';
-    
+    my $type = my $__TYPE__ =
+      $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+    eval "use $type";
+
+    my $template    = $args{template}    || 'zoe/show';
+    my $helper_opts = $args{helper_opts} || {};
+    my $id          = $self->param('id');
+
+    my $object = $type->find($id);
+    $layout = $args{layout} || $layout;
+
+    my %obj_hash = %{$object};
+    return $self->render( json => \%obj_hash ) if $self->req->is_xhr;
+    return
+      $self->render(
+                     object      => $object,
+                     template    => $template,
+                     helper_opts => $helper_opts,
+                     layout      => $layout,
+                     type        => $type,
+      );
+}
+
+sub show_create
+{
+    my $self = shift;
+    my %args = @_;
+    $args{object_action} = '_create';
+
     return $self->show_create_edit(%args);
 }
 
+sub show_edit
+{
+    my $self = shift;
+    my %args = @_;
+    $args{object_action} = '_update';
 
-sub show_create_edit {
-	my $self          = shift; 
-	   
-	my %args          = @_;
-	my $type = my $__TYPE__         = $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__'); 
-	eval "use $type";  
-	 
-	my $template      = $args{template} || 'zoe/create_edit';
-	my $object_action = $args{object_action} || $self->param('__OBJECTACTION__') || $self->stash('__OBJECTACTION__');
-	
- 
-	my $id            = $self->param('id');
-	my $message       = $self->param('message') || '';
-	my $error_msg     = $self->param('error_msg') || '';
-	my $object        = $type->find($id) || $type->new;
+    return $self->show_create_edit(%args);
+}
 
-	my $helper_opts = $args{helper_opts} || {};
+sub show_create_edit
+{
+    my $self = shift;
 
-	$layout = $args{layout} || $layout;
-	$self->render(
-		object        => $object,
-		template      => $template,
-		helper_opts   => $helper_opts,
-		layout        => $layout,
-		message       => $message,
-		error_msg     => $error_msg,
-		type          => $type,
-		object_action => $object_action,
-	);
+    my %args = @_;
+    my $type = my $__TYPE__ =
+      $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+    eval "use $type";
+
+    my $template = $args{template} || 'zoe/create_edit';
+    my $object_action =
+         $args{object_action}
+      || $self->param('__OBJECTACTION__')
+      || $self->stash('__OBJECTACTION__');
+
+    my $id        = $self->param('id');
+    my $message   = $self->param('message') || '';
+    my $error_msg = $self->param('error_msg') || '';
+    my $object    = $type->find($id) || $type->new;
+
+    my $helper_opts = $args{helper_opts} || {};
+
+    $layout = $args{layout} || $layout;
+    $self->render(
+                   object        => $object,
+                   template      => $template,
+                   helper_opts   => $helper_opts,
+                   layout        => $layout,
+                   message       => $message,
+                   error_msg     => $error_msg,
+                   type          => $type,
+                   object_action => $object_action,
+    );
 
 }
 
-sub search {
-	my $self        = shift;
-	my %args        = @_;
-	my $type        = $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__'); 
-	eval "use $type";  
-	
-	
-	my $template    = $args{template} || 'zoe/show_all';
-	my $limit       = $args{limit} || 10;
-	my $where       = $args{where} || {};
-	my $object      = $type->new;
-	my $helper_opts = $args{helper_opts} || {};    #options to the helper
-	my @args        = ();
+sub search
+{
+    my $self = shift;
+    my %args = @_;
+    my $type =
+      $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+    eval "use $type";
 
-	if ( $args{args} ) {
-		@args = @{ $args{args} };
+    my $template = $args{template} || 'zoe/show_all';
+    my $limit    = $args{limit}    || 10;
+    my $where    = $args{where}    || {};
+    my $object   = $type->new;
+    my $helper_opts = $args{helper_opts} || {};    #options to the helper
+    my @args = ();
 
-	}
+    if ( $args{args} )
+    {
+        @args = @{ $args{args} };
 
-	my @columns = $type->get_searchable_columns();
-	my $search  = $self->param('search');
-	my $order   = $self->param('order_by');
-
-	my $offset = $self->param('offset') || 0;
-	my $order_by = [];
-	if ($order) {
-		$order_by = [$order];
-	}
-
-	my $count = scalar(
-		$object->search(
-			columns => \@columns,
-			search  => $search,
-			where   => $where
-		)
-	);
-	my @all = $object->search(
-		columns => \@columns,
-		search  => $search,
-		order   => $order_by,
-		limit   => $limit,
-		offset  => $offset,
-		where   => $where
-	);
-
-
-    if ($self->req->is_xhr) {
-
-    #unbless objects -> turn into hash  
-       foreach my $obj (@all) {
-            my %tmp_hash = %{ $obj};
-            $obj = \%tmp_hash;
-       
-        }
-        return $self->render(
-            json => \@all,
-        ) 
     }
-    
-    
-	$layout = $args{layout} || $layout;
-	if (@args) {
-		return $self->render(
-			@_,
-			object      => $object,
-			limit       => $limit,
-			count       => $count,
-			offset      => $offset,
-			order_by    => $order,
-			all         => \@all,
-			search      => $search,
-			template    => $template,
-			helper_opts => $helper_opts,
-			layout      => $layout,
-			type        => $type,
-			@args
-		);
-	}
-	else {
-		return $self->render(
-			@_,
-			object      => $object,
-			limit       => $limit,
-			count       => $count,
-			offset      => $offset,
-			order_by    => $order,
-			all         => \@all,
-			search      => $search,
-			template    => $template,
-			helper_opts => $helper_opts,
-			layout      => $layout,
-			type         => $type,
 
-		);
+    my @columns = $type->get_searchable_columns();
+    my $search  = $self->param('search');
+    my $order   = $self->param('order_by');
 
-	}
+    my $offset = $self->param('offset') || 0;
+    my $order_by = [];
+    if ($order)
+    {
+        $order_by = [$order];
+    }
+
+    my $count = scalar(
+                        $object->search(
+                                         columns => \@columns,
+                                         search  => $search,
+                                         where   => $where
+                        )
+    );
+    my @all = $object->search(
+                               columns => \@columns,
+                               search  => $search,
+                               order   => $order_by,
+                               limit   => $limit,
+                               offset  => $offset,
+                               where   => $where
+    );
+
+    if ( $self->req->is_xhr() )
+    {
+
+        #unbless objects -> turn into hash
+        foreach my $obj (@all)
+        {
+            my %tmp_hash = %{$obj};
+            $obj = \%tmp_hash;
+
+        }
+        return $self->render( json => \@all, );
+    }
+
+    $layout = $args{layout} || $layout;
+    if (@args)
+    {
+        return
+          $self->render(
+                         @_,
+                         object      => $object,
+                         limit       => $limit,
+                         count       => $count,
+                         offset      => $offset,
+                         order_by    => $order,
+                         all         => \@all,
+                         search      => $search,
+                         template    => $template,
+                         helper_opts => $helper_opts,
+                         layout      => $layout,
+                         type        => $type,
+                         @args
+          );
+    } else
+    {
+        return $self->render(
+            @_,
+            object      => $object,
+            limit       => $limit,
+            count       => $count,
+            offset      => $offset,
+            order_by    => $order,
+            all         => \@all,
+            search      => $search,
+            template    => $template,
+            helper_opts => $helper_opts,
+            layout      => $layout,
+            type        => $type,
+
+        );
+
+    }
 
 }
 
-sub _get_success {
-	my $self         = shift;
-	my $object       = shift;
-	my $success_path = lc( $object->get_object_type );
-	$success_path =~ s/\:\:/_/gmx;
-	$success_path .= '_show_all';
+sub _get_success
+{
+    my $self   = shift;
+    my $object = shift;
+    my %args   = @_;
+    my $type   = my $__TYPE__ =
+      $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
 
-	
+    if ( !$object || $type )
+    {
+        eval "use $type";
+        $object = $type->new();
 
-	
-	my $url = $self->url_for($success_path);
-	return $url;
+    }
+    my $success_path = lc( $object->get_object_type );
+    $success_path =~ s/\:\:/_/gmx;
+    $success_path .= '_show_all';
+
+    my $url = $self->url_for($success_path);
+    return $url;
 }
 
-sub _get_upload {
-	my $self   = shift;
-	my $object = shift;
-	my $column = shift;
+sub _get_upload
+{
+    my $self   = shift;
+    my $object = shift;
+    my $column = shift;
 
-	my $uploaded_file = $self->param($column);
-	return 0 unless ( $uploaded_file->size );
-	my $filename      = $uploaded_file->filename;
-	my $random_string = Data::GUID->new()->as_string;
+    my $uploaded_file = $self->param($column);
+    return 0 unless ( $uploaded_file->size );
+    my $filename      = $uploaded_file->filename;
+    my $random_string = Data::GUID->new()->as_string;
 
-	my $path =
-	  $object->get_upload_path() . '/' . $random_string . '__' . $filename;
-	my $public_path =
-	    $object->get_public_upload_path() . '/'
-	  . $random_string . '__'
-	  . $filename;
+    my $path =
+      $object->get_upload_path() . '/' . $random_string . '__' . $filename;
+    my $public_path =
+        $object->get_public_upload_path() . '/'
+      . $random_string . '__'
+      . $filename;
 
-	$uploaded_file->move_to($path);
-	return $public_path;
+    $uploaded_file->move_to($path);
+    return $public_path;
 }
 
-sub _set_values_from_request_param {
+sub _set_values_from_request_param
+{
 
-	my ( $self, $object ) = @_;
-	my $pkey_name   = $object->get_primary_key_name();
-	my @columns     = $object->get_column_names();
-	my %column_info = $object->get_column_info();
-	my $log         = $self->get_logger('debug');
+    my ( $self, $object ) = @_;
+    my $pkey_name   = $object->get_primary_key_name();
+    my @columns     = $object->get_column_names();
+    my %column_info = $object->get_column_info();
+    my $log         = $self->get_logger('debug');
 
-	
+    foreach my $column (@columns)
+    {
+        my $input_type = $column_info{$column};
+        my $method     = "set_$column";
+        my $get_method = "get_$column";
+        next if ( $column eq $pkey_name );
 
-	foreach my $column (@columns) {
-		my $input_type = $column_info{$column};
-		my $method     = "set_$column";
-		my $get_method = "get_$column";
-		next if ( $column eq $pkey_name );
+        if ( $input_type eq 'file' )
+        {
 
-		if ( $input_type eq 'file' ) {
+            #my $uploaded_file   = $self->param($column);
+            #see if file to be uploaded is specified
+            my $public_path = $self->_get_upload( $object, $column );
+            if ($public_path)
+            {
 
-			#my $uploaded_file   = $self->param($column);
-			#see if file to be uploaded is specified
-			my $public_path = $self->_get_upload( $object, $column );
-			if ($public_path) {
+                $object->$method($public_path);
 
-				$object->$method($public_path);
+            }
 
-			}
+        } else
+        {
 
-		}
-		else {
+            my $value = $self->param($column);
+            $object->$method($value) if ($value);
+        }
+    }
 
-			my $value = $self->param($column);
-			$object->$method($value) if ($value);
-		}
-	}
+    my @many_to_many_members = $object->get_many_to_many_member_names();
+    my @has_many_members     = $object->get_has_many_member_names();
+    my @members              = ( @has_many_members, @many_to_many_members );
 
-	my @many_to_many_members = $object->get_many_to_many_member_names();
-	my @has_many_members     = $object->get_has_many_member_names();
-	my @members              = ( @has_many_members, @many_to_many_members );
+    foreach my $member_name (@members)
+    {
 
-	foreach my $member_name (@members) {
+        my $method = 'set_' . $member_name;
+        my $type   = $object->get_type_for_many_member($member_name);
+        eval "use $type";
 
-		my $method  = 'set_' . $member_name;
-		my $type    = $object->get_type_for_many_member($member_name);
-		eval "use $type";  
-		
-		my @id_list = $self->param($member_name);
+        my @id_list = $self->param($member_name);
 
-		$log->debug( "member_name $member_name" . Dumper @id_list );
-		my @object_list;
+        $log->debug( "member_name $member_name" . Dumper @id_list );
+        my @object_list;
 
-		foreach my $id (@id_list) {
+        foreach my $id (@id_list)
+        {
 
-			#undef value was being added to @id_list; weird;
-			next unless $id;
+            #undef value was being added to @id_list; weird;
+            next unless $id;
 
-			if ( $id =~ /^\d+$/ ) {    #object was selected from drop dwon
-				my $many_object = $type->find($id);
+            if ( $id =~ /^\d+$/ )
+            {    #object was selected from drop dwon
+                my $many_object = $type->find($id);
 
-				push( @object_list, $many_object );
-			}
-			else {                     #new object
-				my $type = $object->get_type_for_many_member($member_name);
-				eval "use $type";  
-				my %rel_column_info = $type->new()->get_column_info();
+                push( @object_list, $many_object );
+            } else
+            {    #new object
+                my $type = $object->get_type_for_many_member($member_name);
+                eval "use $type";
+                my %rel_column_info = $type->new()->get_column_info();
 
-				#id is a json string containing object values
-				my $values = json_to_perl($id);
-				foreach my $rel_column ( keys %{$values} ) {
-					my $rel_input_type = $rel_column_info{$rel_column};
-					next unless $rel_input_type;    # ignore empty entry json
-					
-					if ( $rel_input_type eq 'file' ) {
-						my $rel_public_path =
-						  $self->_get_upload( $type->new(),
-							$values->{$rel_column} );
-						$values->{$rel_column} = $rel_public_path
-						  if ($rel_public_path);
-					}
+                #id is a json string containing object values
+                my $values = json_to_perl($id);
+                foreach my $rel_column ( keys %{$values} )
+                {
+                    my $rel_input_type = $rel_column_info{$rel_column};
+                    next unless $rel_input_type;    # ignore empty entry json
 
-				}
+                    if ( $rel_input_type eq 'file' )
+                    {
+                        my $rel_public_path =
+                          $self->_get_upload( $type->new(),
+                                              $values->{$rel_column} );
+                        $values->{$rel_column} = $rel_public_path
+                          if ($rel_public_path);
+                    }
 
-				my $many_object = $type->new($values);
-				$many_object->{ $many_object->get_primary_key_name() } = undef;
+                }
 
-	#objects that are part of a many to many relationship must be saved prior to
-	#the related object
-				my %many_object_info = $object->get_many_to_many_info;
-				$many_object->save() if ( $many_object_info{$member_name} );
-				push( @object_list, $many_object );
+                my $many_object = $type->new($values);
+                $many_object->{ $many_object->get_primary_key_name() } = undef;
 
-			}
-		}
-		$object->$method( \@object_list ) if ( scalar(@object_list) );
+    #objects that are part of a many to many relationship must be saved prior to
+    #the related object
+                my %many_object_info = $object->get_many_to_many_info;
+                $many_object->save() if ( $many_object_info{$member_name} );
+                push( @object_list, $many_object );
 
-	}
+            }
+        }
+        $object->$method( \@object_list ) if ( scalar(@object_list) );
 
-	return $object;
+    }
+
+    return $object;
+}
+
+sub handle_portal_request
+{
+    my $self      = shift;
+    my $site      = $self->param('__PORTAL__');
+    my $page_name = $self->param('__PAGE__');
+    my $runtime   = $self->get_runtime();
+    my $page      = $runtime->{sites}->{$site}->{$page_name};
+    my $action    = $page->{action};
+    my $template  = ( $page->{template} || 0 );
+    my $layout    = ( $page->{layout} || 0 );
+    my $where     = ( $page->{where} || 0 );
+    my $handler   = ( $page->{handler} || 0 );
+    my $type      = ( $page->{type} || 0 );
+
+    if ($handler)
+    {
+        eval "use $handler";
+        return $handler->new()->$action( controller => $self, page => $page );
+    } else
+    {
+        return
+          $self->$action(
+                          template => $template,
+                          layout   => $layout,
+                          type     => $type
+          );
+    }
 }
 1;

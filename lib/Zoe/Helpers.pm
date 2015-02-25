@@ -590,6 +590,7 @@ sub _get_rows_for_many
 
     foreach my $many_object (@many_objects)
     {
+        next unless ($many_object);
         my $many_string = $many_object->to_string;
         my $route_name  =
           $self->_get_route_name_for_object( $many_object, "_show" );

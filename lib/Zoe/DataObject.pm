@@ -60,7 +60,7 @@ sub new
   #Read in config from param or use default
   #config/db.yml file
   $config = $arg{DBCONFIGFILE}
-    || "$FindBin::Bin/../config/db.yml";
+    || "$FindBin::Bin/../config/runtime.yml";
   confess "Could not read config file: $config" unless ( -e $config );
   $runtime = YAML::XS::LoadFile($config) or croak "malformed YAML: $config";
  }
@@ -164,11 +164,11 @@ sub _delete_to_many
    $where{$my_col} = $self->get_primary_key_value;
 
    my ( $cmd, @bind ) = $sql_builder->delete( $rel_table, \%where );
-   Zoe::DataObject::Logger::Zoe::DataObject::Logger::debug(
+   Zoe::DataObject::Logger::debug(
                                      "deleting MANYTOMANY for " . $self->{TYPE},
                                      $is_verbose );
 
-   Zoe::DataObject::Logger::Zoe::DataObject::Logger::debug( $cmd, $is_verbose );
+   Zoe::DataObject::Logger::debug( $cmd, $is_verbose );
    my $sth = $dbh->prepare($cmd);
    $sth->execute(@bind);
 
@@ -218,7 +218,7 @@ sub delete
       $obj->{$column} = $self->get_primary_key_value();
       $obj->delete();
      }
-     Zoe::DataObject::Logger::Zoe::DataObject::Logger::debug(
+     Zoe::DataObject::Logger::debug(
                                        "$type ------- $member, ------, $column",
                                        $is_verbose );
     };
@@ -285,7 +285,7 @@ sub new
                 #after the shifts
    ( %arg = @_ );
 
- $connect = Zoe::Connection->new( runtime => $arg{runtime} ) unless ($connect);
+ $connect = Zoe::Connection->new( runtime => $arg{runtime} ) ;#unless ($connect);
  
  my $self = {
               TYPE => $type,
@@ -293,7 +293,7 @@ sub new
               ID   => undef,
               %arg,
  };
- $self->{DBH} = $connect->{DBH};
+ #$self->{DBH} = $connect->{DBH};
 
  $DBConnection = $connect;
  $sql_builder  = SQL::Abstract::More->new;

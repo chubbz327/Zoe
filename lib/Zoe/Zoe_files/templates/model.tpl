@@ -35,7 +35,7 @@ sub new {
     #__MANYTOMANY__
 
     my $type = shift;
-    my $self = __PACKAGE__->SUPER::spawn( @_, SQL => $sql );
+    my $self = __PACKAGE__->SUPER::new( @_, SQL => $sql );
     return bless $self;
 }
 sub get_column_info {

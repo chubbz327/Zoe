@@ -146,7 +146,7 @@ sub check_unique {
     my $self = shift;
     my $column  = $self->param('COLUMN');
     my $value   = $self->param('VALUE');
-    my $type= $self->stach('__TYPE__');
+    my $type= $self->stash('__TYPE__');
     
     my $return = scalar( $type->find_by(where=>{$column => $value }) );
     

@@ -8,7 +8,7 @@ use File::Spec::Functions 'catdir';
 use DateTime;
 use DateTime::Format::DBI;
 use Data::Dumper;
-use YAML::Tiny;
+#use YAML::Tiny;
 use FindBin;
 use Path::Class;    #non os specific file and dir access
 use File::Copy;
@@ -287,7 +287,7 @@ sub _write_tests {
     my $test_file = file( $application_location, 't', '00.crud.t' );
     my $test_statements = '';
     _set_object_meta($objects_ref);
-    my $test_code = read_file( file( $ZOE_FILES, 't', '00-data-scaffold.t' ) );
+    my $test_code = read_file( file( $ZOE_FILES, 'templates', '00.crud.tpl' ) );
 
     #my $test_number = scalar (@objects_meta);
     foreach my $object (@objects_meta) {
@@ -509,12 +509,7 @@ sub generate_mojo_app {
       or croak
       "Could not remove temporary directory $application_directory:$!\n";
 
-    #copy DataOBJECT file
-    #my $do_file = file( '..', 'lib', 'Zoe', 'DataObject.pm' );
-    #my $do_dir = dir( $application_location, 'lib', 'Zoe' );
-    #copy assets .css .js .img
-    #my $from_asset = dir( $ZOE_FILES,            'public', 'assets' );
-    #my $to_asset   = dir( $application_location, 'public', 'assets' );
+
     my $from_asset = dir( $ZOE_FILES,            'public' );
     my $to_asset   = dir( $application_location, 'public' );
 
@@ -647,7 +642,7 @@ sub generate_mvc {
         objects    => \@objects,
         url_prefix => $url_prefix
     );
-    _write_controllers( \@objects );
+   # _write_controllers( \@objects );
     _write_views( \@objects );
     _write_layout( \@objects, $url_prefix );
     _write_tests( \@objects, $url_prefix );
@@ -664,7 +659,7 @@ sub generate_mvc {
         else {
             msg( "Creating $auth_yml", $is_verbose );
         }
-        YAML::Tiny::DumpFile( "$auth_yml", $auth_content );
+       # YAML::Tiny::DumpFile( "$auth_yml", $auth_content );
 
         #set the authorization runtime
         $runtime->{authorization} = $auth_content;
@@ -682,7 +677,7 @@ sub generate_mvc {
         else {
             msg( "Creating $paypal_yml", $is_verbose );
         }
-        YAML::Tiny::DumpFile( "$paypal_yml", $paypal_content );
+        #YAML::Tiny::DumpFile( "$paypal_yml", $paypal_content );
 
         #copy templates
         for my $file (
@@ -697,7 +692,7 @@ sub generate_mvc {
     }
 
     #add application location lib  to -I
-    print " " . dir( $application_location, 'lib' ) . "\n\n";
+    
     unshift @INC, "" . dir( $application_location, 'lib' );
     foreach my $object (@objects) {
 
@@ -882,6 +877,18 @@ sub generate_mvc {
           dir( $application_location, "public", "upload", $object_name_short );
         my $upload_short = dir( "upload", $object_name_short );
         my $public_upload_path = "/upload/$object_name_short/";
+        
+
+        if ( -d "$upload_path" ) {
+            msg( "$upload_path exits", $is_verbose );
+        }
+        else {
+            msg( "Created $upload_path", $is_verbose );
+            make_path("$upload_path") or croak "Could not create $upload_path";
+        }
+        
+        
+        
         $model_code =~ s/\#__UPLOADPATH__/$upload_short/gmx;
         $model_code =~ s/\#__PUBLICUPLOADPATH__/$public_upload_path/gmx;
         $model_code =~ s/\#__TOSTRINGMEMBER__/$to_string_member/gmx
@@ -964,8 +971,8 @@ q^      $sql->{MANYTOMANY}->{'%s'} = [] unless ( ref ($sql->{MANYTOMANY}->{'%s'}
    constraints: 'not null'
 YML
                 my $many_to_may_co_ref =
-                  YAML::Tiny->read_string($many_to_many_col_yml);
-                _do_create_ddl( $many->{table}, $many_to_may_co_ref->[0] );
+                 YAML::XS::Load($many_to_many_col_yml);
+                _do_create_ddl( $many->{table}, $many_to_may_co_ref );
                 if ( $many->{linked_create} ) {
                     my $rel_object_name = $many->{object};
                     $linked_create{$rel_object_name} = $many->{member};
@@ -990,6 +997,11 @@ YML
           or croak "Could not write to $model_file: $!";
         print $MODEL_CODE $model_code;
         close($MODEL_CODE);
+        
+        
+        
+        
+        
         _do_create_ddl( $object->{table}, $object->{columns} );
 
         # _do_create_ddl($many->{table},
@@ -1174,7 +1186,8 @@ sub _write_routes {
         $routes_code =~ s/\#__OBJECTNAME__/$object_name/gmx;
         $routes_code =~ s/\#__OBJECTROUTE__/$object_route/gmx;
         $routes_code =~ s/\#__URLPREFIX__/$url_prefix/gmx;
-        $routes_code =~ s/\#__CONTROLLER__/$controller_name/gmx;
+        #$routes_code =~ s/\#__CONTROLLER__/$controller_name/gmx;
+        $routes_code =~ s/\#__CONTROLLER__/'Zoe::ZoeActionController'/gmx; 
         $routes_code =~ s/\#__OBJECTTYPE__/$object->{object}/gmx;
 
         $routes_yml .= $routes_code;
@@ -1187,7 +1200,7 @@ sub _write_routes {
 
     #add routes to Runtime
     my $routes = YAML::XS::Load($routes_yml);
-    print Dumper $routes;
+    #print Dumper $routes;
 
     #get routes from the sites section
     $runtime->{routes} = $routes;
