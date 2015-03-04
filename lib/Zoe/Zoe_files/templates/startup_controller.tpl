@@ -232,11 +232,7 @@ sub startup {
        $r->$method('/__REFUNDTRANSACTION__')->name('__REFUNDTRANSACTION__')
               ->to( namespace => 'Zoe::PayPayTransactionController', action => 'refund_transaction' );       
                              
-       #payment_complete_route
-     #  $r->$method($paypal_config->{payment_complete_route}->{method})
-      #      ->name($paypal_config->{payment_complete_route}->{name})
-       #       ->to( namespace => $paypal_config->{payment_complete_route}->{controller}, 
-        #            action => $paypal_config->{payment_complete_route}->{action} );                              
+                            
                
     }
 
@@ -319,12 +315,6 @@ sub startup {
             $r->$method($path)->name($name)
             	
                 ->to( namespace => $controller, action => $action , __TYPE__ => $type,);
-                
-#                $r = $r->under($path =>sub {
-#//                	my $c = shift;
-#//                	$c->stash('__TYPE__' => $type);
-#//                	return 1;
-#//                });
 
         }
 
@@ -333,11 +323,6 @@ sub startup {
     #add route for portals
     $r->any('/__PORTAL__/:__PORTAL__/:__PAGE__')->name('__handle_portal_request__')
     	->to( namespace =>'ZoeController', action =>'handle_portal_request');
-    
-
-    
-  
-    #__ROUTES__
-   
+       
 }
 1;

@@ -15,13 +15,16 @@ use Env;
 
 sub debug
 {
+ $ENV{MOJO_MODE} = 'development' unless($ENV{MOJO_MODE});
+ my $log_dir = dir ( "$FindBin::Bin", '..', 'log',);
+ return unless (-e "$log_dir");
  my $log_file = file( "$FindBin::Bin", '..', 'log', $ENV{MOJO_MODE} . '.log' );
- my $logger  = Mojo::Log->new( path=>"$log_file" ) or die "$!";
+ my $logger  = Mojo::Log->new( path=>"$log_file" );
  my $caller  = ( caller(1) )[3];
  my $message = __PACKAGE__ . ':' . $caller . ': ' . shift;
  my $method  = 'debug';
 
-  $logger->debug( $message) or die "could not write log $!";
+  $logger->debug( $message); 
   
 }
 
@@ -276,6 +279,7 @@ sub new
  );
  $type = shift;
 
+#print "$type\n\n";
  #if  hash ref
  ( ( ref( $_[0] ) eq 'HASH' ) || ( @_ % 2 != 0 ) )
    ?            # if called via super
@@ -753,6 +757,9 @@ sub save
  #my $dbh    = $self->{DBH};
  my %sql     = %{ $self->{SQL} };
  my @columns = $self->get_column_names();
+ 
+ #print $self->{TYPE}. "\n\n\n";
+# print Dumper @columns;
 
  #Build sql
  my $table_name = $sql{'TABLE'};
@@ -786,7 +793,8 @@ sub save
  #execute sql
  Zoe::DataObject::Logger::debug( $cmd . "  :values " . join( ", ", @bind ),
                                  $is_verbose );
-
+#print Dumper $self;                                 
+#print  $cmd . "\n\n\n";
  my $sth = $dbh->prepare($cmd);
  $dbh->{RaiseError} = 1;
 
@@ -825,6 +833,7 @@ sub save
      {
 
       my $new_obj = $type->new($obj);
+      #print "saving have many collections for " . $type ."\n\n\n";
       $new_obj->{$column} = $self->get_primary_key_value();
       $new_obj->save();
       Zoe::DataObject::Logger::debug( "$type ------- $member, ------, $column",
@@ -1047,6 +1056,9 @@ sub _load_fk
                  $is_verbose );
  my $sql_builder = $self->_get_sql_builder;
  my ( $cmd, @bind ) = $sql_builder->select( $table_name, \@columns, \%where );
+
+ 
+ 
  my $sth = $dbh->prepare($cmd);
  $sth->execute(@bind);
  my @return;

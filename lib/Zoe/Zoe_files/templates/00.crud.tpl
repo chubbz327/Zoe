@@ -14,6 +14,8 @@ $ENV{MOJO_LOG_LEVEL}="debug";
 
 my $v_tmp;    #temporary var used for comparison
 my $where;    #used for finds
+my $ADMINUSER = 'admin';
+my $ADMINPASS = 'test';
 
 ###########################################
 ####confirm the Zoe::DataObject loads
@@ -76,7 +78,9 @@ foreach my $object_type (@objects_to_test) {
 ####################################
 ####Web tests
 ####################################
-
+#log in 
+    $t->post_ok('/login'  =>form =>{user=>$ADMINUSER, password=>$ADMINPASS})
+    ->status_is(302, "log in successfull");
 #make sure / works
 $t->get_ok( '/#__URLPREFIX__', '#__APPLICATIONNAME__ is up' )
   ->status_is( 200, '#__APPLICATIONNAME__ returned 200 for /' );

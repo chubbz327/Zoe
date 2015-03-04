@@ -5,9 +5,13 @@ use Zoe::Runtime::Model;
 use Zoe::Runtime::Authorization;
 use Zoe::Runtime::ServerStartUp;
 
+use Zoe::DataObject;
+use parent qw( Zoe::DataObject);
+
 sub new {
 
 	my $class = shift;
+	my $type = $class;
 	my %arg   = @_;
 
 	my $self = {
@@ -25,116 +29,181 @@ sub new {
 			models        => 'Zoe::Runtime::Model',
 			authorization => 'Zoe::Runtime::Authorization',
 		},
-		_init_data =>,
-		\%arg,
+		#_init_data =>, \%arg,
 
 		%arg
 	};
+	my $sql = {};
+	
+	#set the table name
+    $sql->{TABLE} = 'ZoeRuntime';
 
-	$self = bless $self, $class;
+    #set the table definitions
+    @{ $sql->{COLUMNS} } = qw(ID name );
+
+    #define the primary key
+    $sql->{PRIMARYKEY} = qq/ID/;
+
+    #set the foreign kyes
+
+    #set has many relationships
+    #__HASMANY__
+      #create array ref for has_many object unless it already exists
+                       #object         #member             #fk_column
+                        $sql->{HASMANY}->{'Zoe::Runtime::Model'} = [] unless ( ref ($sql->{HASMANY}->{'Zoe::Runtime::Model'}) eq 'ARRAY' );
+                        #push member to key hash into array ref
+                        push(@{$sql->{HASMANY}->{'Zoe::Runtime::Model'} }, {'models' => 'Runtime_ID' });
+
+
+    #set has manytomany relationships
+    my $many_description;
+    #__MANYTOMANY__
+
+
+
+   
+    $self = __PACKAGE__->SUPER::new( @_, SQL => $sql );
+    return bless $self;
+
+	#$self = bless $self, $class;
 
 	#initialize serverstartup
 
-	$self->initialize();
+	#$self->initialize();
 	return $self;
 }
 
-sub get_JSON {
-	my $self = shift;
-	return JSON::Any->new( allow_blessed => 1 )
-	  ->objToJson( $self->{_init_data}->{serverstartup} );
+sub get_column_info {
+    my $self =shift;
+    my @column_info = (
+        'ID', 'integer',
+'name', 'timestamp',
+
+    );
+    return @column_info;
+}
+
+sub get_route {
+    my $self    = shift;
+    return '#__ROUTE__';
+}
+
+sub get_display_as_for {
+    my $self = shift;
+    my $column_name = shift;
+    my %display_as = (
+
+
+    );
+
+    return $display_as{$column_name} || $column_name;
+}
+
+
+sub get_select_options_for {
+    my $self = shift;
+    my $column_name = shift;
+    my %select_options = (
+
+    );
+    return $select_options{$column_name};
 
 }
 
-sub get_form_schema {
-	my $self = shift;
-#	return {
-#		schema => {
-#			type       => 'object',
-#			title      => 'Run Time',
-#			properties => {
-#				server_startup =>
-#				  Zoe::Runtime::ServerStartUp->new()->get_form_schema(),
-#			}
-#		}
-#	};
-#	return JSON::Any->new()->objToJson({
-#		
-#			properties => {
-#				serverstartup =>
-#				  Zoe::Runtime::ServerStartUp->new()->get_form_schema()
-#			}
-#		
-#	});
 
+sub get_linked_create {
+    my $self = shift;
+    my $linked_create = {
 
-return JSON::Any->new()->objToJson(
-		
-		
-				  Zoe::Runtime::ServerStartUp->new()->get_form_schema()
-			);
+    };
+    return $linked_create;
 }
 
-sub initialize {
-	my $self = shift;
 
-	#instantiate child objects with values stored in self
-	#then assign back to $self
-	foreach my $key ( keys( %{ $self->{types} } ) ) {
-		my $list_ref = [];
-		my $obj_type = $self->{types}->{$key};
-		if ( ref( $self->{$key} ) eq 'ARRAY' ) {
-
-			#for each object data create a new object and add to array ref
-			foreach my $obj_data ( @{ $self->{$key} } ) {
-				push( @{$list_ref}, $obj_type->new( %{$obj_data} ) );
-			}
-
-			#assign array ref back to self
-			$self->{$key} = $list_ref;
-
-		}
-		else {
-
-			#top level object
-			my $obj_data = $self->{$key};
-
-			$self->{$key} = $obj_type->new( %{$obj_data} ) if ($obj_data);
-			
-		}
-
-	}
-
+sub get_searchable_columns {
+    my $self = shift;
+    my @searchable_columns = (
+        'ID', 'name',
+    );
+    return @searchable_columns;
 }
 
-sub get_json_schema {
-	my $self = shift;
-	my @keys = $self->get_keys();
+sub is_required_column {
+    my $self = shift;
+    my $column = shift;
+    my %required_column = (
 
-	foreach my $key (@keys) {
-		unless ( ref( $self->{key} ) ) {
+        'name' => 1 ,
 
-			#scalar value
 
-			next;
-		}
-	}
+        );
+    return $required_column{$column} if ( defined($required_column{$column}) );
+    return undef;
+}
+
+
+sub get_column_display {
+    my $self = shift;
+    my $column = shift;
+    my %display = (
+
+
+
+        );
+
+    return $display{$column} if ( defined($display{$column}) );
+
+    return undef;
+}
+
+sub to_string {
+    my $self = shift;
+    return $self->{
+     'name'
+    };
+
+}
+sub get_to_string_member {
+    my $self = shift;
+
+
+     return 'name';
 
 }
 
-sub get_keys {
-	my $self = shift;
+sub get_upload_path {
+    my $self = shift;
+    return "$FindBin::Bin/../public/" . 'upload/Zoe_Runtime';
+}
 
-	my @keys = keys( %{$self} );
-	my @return;
-	foreach my $key (@keys) {
-		push( @return, $key )
-		  unless ( $key =~ /mandatory_fields|dependant_fields|_schema/i );
-	}
+sub get_public_upload_path {
+    my $self = shift;
+    return '/upload/Zoe_Runtime/';
+}
 
-	return \@return;
+sub is_auth_object{
+    my $self =  shift;
+    return 0;
 
 }
+
+sub auth_object_info {
+    my $self = shift;
+
+    return qw( );
+
+}
+
+sub get_no_select {
+    my $self = shift;
+    return ();
+
+}
+sub get_object_name_short_hand {
+    my $self = shift;
+    return 'zoe_runtime';
+}
+
 
 sub check_valid {
 	my $self       = shift;

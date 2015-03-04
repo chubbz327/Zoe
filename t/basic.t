@@ -47,6 +47,5 @@ my $output = Zoe->new()->generate_application(
 
 my $generated_test = file($app_location, 'employee' , 't', '00.crud.t');
 runtests( ["$generated_test"]);
-#remove_tree("$app_location");
   
 #unlink($file);

@@ -25,10 +25,10 @@ sub new {
 
     my %data_object_config = %{ $auth_config->{config}->{data_object} };
     $auth_object        = $data_object_config{auth_object};
-   $auth_object_lib    = $data_object_config{auth_object_lib};
+  #$auth_object_lib    = $data_object_config{auth_object_lib};
     
-    my $lib_dir = dir("$FindBin::Bin", '..', 'lib', split(/\//, $auth_object_lib) );
-    unshift @INC, "$lib_dir";
+   # my $lib_dir = dir("$FindBin::Bin", '..', 'lib', split(/\//, $auth_object_lib) );
+    #unshift @INC, "$lib_dir";
     
    eval  "require $auth_object";
     

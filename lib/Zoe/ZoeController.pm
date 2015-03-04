@@ -329,7 +329,7 @@ sub show_all
     );
 
     my $search;
-
+print Dumper @all;
     $layout = $args{layout} || $layout;
     my %return = (
                    search      => $search,
@@ -393,6 +393,8 @@ sub show
     my %args = @_;
     my $type = my $__TYPE__ =
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+      
+      print $type . "TYPE\n\n\n\n\n";
     eval "use $type";
 
     my $template    = $args{template}    || 'zoe/show';
