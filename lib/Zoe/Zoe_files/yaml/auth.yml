@@ -1,0 +1,107 @@
+
+  
+authorization:
+  login_path: /login
+  login_controller: Zoe::AuthenticationController
+  login_show_method: show_login
+  login_do_method: do_login
+  login_template: zoe/signin
+  login_user_param: user
+  login_password_param: password
+  default_index: /
+
+  logout_path: /logout
+  logout_controller: Zoe::AuthenticationController
+  logout_do_method: logout
+
+
+
+  user_session_key: user_id
+  role_session_key: role
+  roles:
+    -  name: admin
+    -  name: user
+  methods:
+    data_object: __DEFAULT__  
+    
+  config:
+    routes:
+      -  path: /__ADMIN__.*
+         method: match_role
+         http_method: any
+         match_roles:
+           - name: admin
+      -  path: .*
+         method: match_role
+         http_method: any
+         match_roles:
+          - name: '*'
+        
+    data_object:
+      auth_object: Zoe::DO::User
+      role_column: Role_ID
+      salt_member: password_salt
+      password_member: password_hash
+      user_name_member: login
+      role_object: Zoe::DO::Role
+      admin_role: admin    
+      
+models:
+  - object: Zoe::DO::Role
+    has_many:
+     -  object: Zoe::DO::User
+        key: Role_ID
+        member: Users  
+    table: Role
+    columns:
+     -  name: ID
+        type: integer
+        primary_key: 1
+     -  name: name
+        type: text
+        constraints: "not null"
+        to_string: 1
+        
+    initial_values:
+    - name: admin
+    - name: web_user
+    - name: contributer  
+        
+  - object: Zoe::DO::User 
+    table: User
+    columns:
+     -  name: ID
+        type: integer
+        primary_key: 1
+        
+     -  name: login
+        type: text
+        constraints: "not null"
+        to_string: 1
+
+     -  name: password_hash
+        type: text
+        constraints: "not null"
+        display: none      
+
+     -  name: password_salt
+        type: text
+        constraints: "not null"
+        display: none        
+
+     -  name: Role_ID
+        type: integer
+        constraints: 
+        foreign_key: Zoe::DO::Role
+        member: Role
+
+    initial_values:
+    -  login: admin
+       password_hash: 05aaab2856408bcc06db2fe28ac184db30fcbdfc
+       password_salt: nelsonmandella1288
+       Role_ID: 1        
+
+
+
+
+
