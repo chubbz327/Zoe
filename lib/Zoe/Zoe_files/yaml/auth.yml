@@ -39,7 +39,7 @@ authorization:
         
     data_object:
       auth_object: Zoe::DO::User
-      role_column: Role_ID
+      role_member: Role
       salt_member: password_salt
       password_member: password_hash
       user_name_member: login
@@ -52,7 +52,7 @@ models:
      -  object: Zoe::DO::User
         key: Role_ID
         member: Users  
-    table: Role
+    table: ZoeDORole
     columns:
      -  name: ID
         type: integer
@@ -68,7 +68,7 @@ models:
     - name: contributer  
         
   - object: Zoe::DO::User 
-    table: User
+    table: ZoeDOUser
     columns:
      -  name: ID
         type: integer

@@ -7,15 +7,17 @@ use List::MoreUtils qw{any};
 use Scalar::Util qw(reftype);
 use Digest::SHA1 qw(sha1_hex);
 use Path::Class;
+#use Data::Serializer;
 
+use YAML::XS;
 use Data::Dumper;
 my $auth_config = 0;
 my $is_verbose  = 1;
 use constant EMPTY_STRING => '';
 
-BEGIN { unshift @INC, "$FindBin::Bin/../lib" }
+ 
 use vars
-  qw($auth_object_lib $auth_object $role_column $salt_member $password_member $user_name_member $role_object);
+  qw($auth_object_lib $auth_object $role_member $salt_member $password_member $user_name_member $role_object);
 
 sub new {
     my $class = shift;
@@ -32,15 +34,15 @@ sub new {
     
    eval  "require $auth_object";
     
-    $role_column     = $data_object_config{role_column};
+    $role_member     = $data_object_config{role_member};
     $salt_member     = $data_object_config{salt_member};
     $password_member = $data_object_config{password_member};
     $user_name_member   = $data_object_config{user_name_member};
     $role_object        = $data_object_config{role_object};
     
     eval "require $role_object";
-    unless ( $auth_object && $role_column && $salt_member && $password_member &&  $user_name_member) {
-        croak "auth_object role_column password_member salt_member user_name_member are required for data_object authentication";
+    unless ( $auth_object && $role_member && $salt_member && $password_member &&  $user_name_member) {
+        croak "auth_object role_member password_member salt_member user_name_member are required for data_object authentication";
     }
     my $self = bless {@_}, $class;
     return $self;
@@ -65,6 +67,7 @@ sub do_check {
     
     my @all         = $auth_object->new()->load_by( where=>{$user_name_member => $user_name} );
     my $user        = $all[0];
+   # print Dumper $user;
     
  
 
@@ -77,7 +80,7 @@ sub do_check {
     my $hash  = sha1_hex($salt . $password);
     
     
-    print "HASH $hash IS SHOULD BE " .  $user->{$password_member} . "\n";
+   # print "HASH $hash IS SHOULD BE " .  $user->{$password_member} . "\n";
     return 0 unless($hash eq $user->{$password_member});
 
 
@@ -94,19 +97,23 @@ sub do_check {
     $controller->session( $auth_config->{user_session_key}, => $user_name );
 
     #set role session keys
-    my $role = $role_object->find($user->{$role_column}); 
-
-    my $role_string = $role->to_string();
+    my $role_method = 'get_' . $role_member;
     
-    debug(
-        __PACKAGE__
-          . ":Adding role_session_key"
-          . $auth_config->{role_session_key}
-          . "with value of $role_string",
-        $is_verbose
-    );
-    $controller->session( $auth_config->{role_session_key}, => $role_string );
-    return 1;    
+    my $roles = $user->$role_method(); 
+    
+    if (ref($roles) eq 'ARRAY') {
+        foreach my $role ( @{$roles} ) {
+             $role->{DBH} = {};
+        }
+        
+    }else {
+        
+        $roles->{DBH} = {};
+    }
+ 
+   
+    $controller->session( $auth_config->{role_session_key},  YAML::XS::Dump( $roles ) ); 
+    return 1;   
 
 }
 

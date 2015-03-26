@@ -17,6 +17,8 @@ my $where;    #used for finds
 my $ADMINUSER = 'admin';
 my $ADMINPASS = 'test';
 
+my @tmp_list;
+
 ###########################################
 ####confirm the Zoe::DataObject loads
 ############################################
@@ -141,7 +143,7 @@ sub post_data {
         my $type = $all_many{$member};
         my @list = $type->find_all();
          if(scalar (@list)) {
-             my @ids = ($list[0]->get_primary_key_value);
+             my @ids = ($list[$#list]->get_primary_key_value);
              $form->{$member} = \@ids;
          }               }
     

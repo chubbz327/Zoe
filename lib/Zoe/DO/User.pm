@@ -17,7 +17,7 @@ sub new {
     #remove the prefix to package name
     $table_name =~ s/.*::(\w+)$/$1/;
     #set the table name
-    $sql->{TABLE} = 'User';
+    $sql->{TABLE} = 'ZoeDOUser';
 
     #set the table definitions
     @{ $sql->{COLUMNS} } = qw(ID login password_hash password_salt Role_ID );

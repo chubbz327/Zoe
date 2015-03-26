@@ -152,10 +152,9 @@ sub generate_application
     }
 
     #dinni
-    print $runtime;
     my $runtime_string = YAML::XS::DumpFile( $runtime_yml, $runtime )
       or die "$!";
-    print "VERSION " . $VERSION . "\n";
+   
 }
 
 ############################################
@@ -189,7 +188,7 @@ sub zoe_init
             my $config = YAML::XS::LoadFile($file)
               or croak " YAML Parse error in $application_config_file" . $!;
 
-            #print Dumper $config;
+           
             my $tmp_ref;
             $tmp_ref =
               Hash::Merge->new('RETAINMENT_PRECEDENT')
@@ -227,7 +226,7 @@ sub zoe_init
 
     $application_description->[0] = \%tmp_hash;
 
-    #print Dumper $application_description;
+    
     #Set application name
     $application_name =
       $application_description->[0]->{serverstartup}->{application_name};
@@ -309,6 +308,15 @@ sub _write_tests
         #do not generate tests for zoe runtime objects
         next if ( $object_name =~ /Zoe\:\:Runtime/ );
         next if ( $object_name =~ /Zoe\:\:DO/ );
+        
+        #do not generate tests for authentication objects
+       
+        my $role_regex = $application_description->[0]->{authorization}->{config}->{data_object}->{role_object} || 0;
+        #my $user_regex = $application_description->[0]->{authorization}->{config}->{data_object}->{user_object} || 0;
+        $role_regex =~ s/\:/\\:/g;
+        #$user_regex =~ s/\:/\\:/g;
+        #next if ( $object_name =~ /$role_regex/ );
+        #next if ( $object_name =~ /$user_regex/ );
 
         my $object_name_short = $object_name;
         my $web_updated_code  = '';
@@ -339,7 +347,7 @@ qq^ ok($variable_name->get_primary_key_value, '$object_name save');\n^;
                 {
                     my $db_parser =
                       DateTime::Format::DBI->new( $do->get_database_handle() );
-                    my $dt = DateTime->now();
+                    my $dt = DateTime::now();
                     $random_string = $db_parser->format_datetime($dt);
                 }
                 my $column_name     = $column->{name};
@@ -380,8 +388,9 @@ qq^'foreign_key relationship between $object_name and $fk_type save'); ^;
                   . qq^ '$object_name updated');\n^
                   . qq^\n#Find $object_name by $member\n ^
                   . qq^\$where ={ $member => '$random_string2'};\n^
-                  . qq^\$v_tmp = ($object_name->find_by(where => \$where))[0];\n^
-                  . qq^ok(\$v_tmp->get_primary_key_value == $variable_name->get_primary_key_value, \n\t^
+                  . qq^ \@tmp_list = ($object_name->find_by(where => \$where));\n^
+                  . q^$v_tmp = $tmp_list[$#tmp_list];^
+                  . qq^\nok(\$v_tmp->get_primary_key_value == $variable_name->get_primary_key_value, \n\t^
                   . qq^'Find $object_name by $member ');\n^;
             }
         }
@@ -432,8 +441,8 @@ sub _copy_fragments
     my $from = dir( $ZOE_FILES,            'templates', 'fragments' );
     my $to   = dir( $application_location, 'templates', 'fragments' );
     dircopy( "$from", "$to", )
-      or die "Could not copy fragments directory\n$!";
-    print "$from $to DIR COPUY FRAGMENTS\n";
+      or die "Could not copy fragments directory: $from $to\n$!";
+     
 }
 ############################################
 # Usage      : private
@@ -503,7 +512,7 @@ sub _write_layout
     msg( "Created $layout_dir", $is_verbose );
     unless ( ( !-e $layout_out ) || ($do_replace_existing) )
     {
-        debug( "$layout_out exists; specify --repace to overwrite", 1 );
+        debug( "$layout_out exists; specify --repace to overwrite", $is_verbose );
 
         #return;
     }
@@ -526,14 +535,31 @@ sub generate_mojo_app
          $is_verbose );
     my $mojo_message = `mojo generate app $application_name`;
     msg( $mojo_message, $is_verbose );
+    
+    ##copy application_directory to temp dirctory
+    ## this is in the event that the script is run from install path
+    my $tmp_dir_name = time(); 
     my $application_directory = decamelize($application_name);
-    dircopy( $application_directory, "$application_location" )
-      or croak
-      "Could not move: $application_directory  $application_location\n$!";
+    
+    dircopy( $application_directory, $tmp_dir_name ) or croak
+      "Could not create temporary directory $tmp_dir_name:$!\n";
+    
     remove_tree($application_directory)
       or croak
       "Could not remove temporary directory $application_directory:$!\n";
-
+      
+    
+    dircopy( $tmp_dir_name, "$application_location" )
+      or croak
+      "Could not move: $application_directory  $application_location\n$!";
+    
+    
+    remove_tree($tmp_dir_name)
+      or croak
+      "Could not remove temporary directory $tmp_dir_name:$!\n";
+      
+    
+    
     my $from_asset = dir( $ZOE_FILES,            'public' );
     my $to_asset   = dir( $application_location, 'public' );
 
@@ -886,7 +912,7 @@ sub generate_mvc
                 if ( $input_type eq 'select' )
                 {
 
-                    print "SELECTOPTIONS\n" . Dumper $column->{select_options};
+                   # print "SELECTOPTIONS\n" . Dumper $column->{select_options};
                     my %select_options = %{ $column->{select_options} };
                     my $options_string;
                     foreach my $select_value ( sort keys(%select_options) )
@@ -1057,8 +1083,7 @@ YML
     }
     _set_initial_values( \@objects );
     $runtime->{name} = time();
-    print Dumper $runtime;
-    #Zoe::Runtime->new(%{$runtime})->save();
+    
     return;
 }
 

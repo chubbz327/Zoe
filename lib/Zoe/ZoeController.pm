@@ -133,7 +133,6 @@ sub create
     my $message = $args{message} || "$type created";
     my $object = $type->new();
 
-    #print Dumper $object;
 
     my $url = ( $args{url} || $self->_get_success($object) );
 
@@ -329,7 +328,6 @@ sub show_all
     );
 
     my $search;
-print Dumper @all;
     $layout = $args{layout} || $layout;
     my %return = (
                    search      => $search,
@@ -369,7 +367,6 @@ print Dumper @all;
   #                         html => \%return );
 
     #render( json => \@all );
-    #print Dumper %return;
 
     return
       $self->render(
@@ -394,7 +391,6 @@ sub show
     my $type = my $__TYPE__ =
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
       
-      print $type . "TYPE\n\n\n\n\n";
     eval "use $type";
 
     my $template    = $args{template}    || 'zoe/show';

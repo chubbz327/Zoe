@@ -68,7 +68,7 @@ sub do_login {
         
         if ( $auth_handler ne '__DEFAULT__') {
             eval "use " . $auth_handler;
-            print "FINd BIN $FindBin::Bin/../\n\n";
+           # print "FINd BIN $FindBin::Bin/../\n\n";
            $auth_success = (($auth_handler->new($auth_config))->do_check($self)) unless ($auth_success);         
         }else {
             #auth_handler set to default
