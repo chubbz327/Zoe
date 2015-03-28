@@ -373,6 +373,10 @@ qq^#check foreign_key relationship between $object_name and $fk_type\n^;
 qq^ok( $variable_name->get_$member()->get_primary_key_value == \n\t$fk_variable_name->get_primary_key_value,\n^;
                 $test_statements .=
 qq^'foreign_key relationship between $object_name and $fk_type save'); ^;
+
+                my $column_name     = $column->{name};
+                my $variable_string = "\t$column_name => 1, \n";
+                $create_new .= $variable_string;
             }
 
             #write test code for object updates
@@ -755,6 +759,7 @@ sub generate_mvc
     unshift @INC, "" . dir( $application_location, 'lib' );
     foreach my $object (@objects)
     {
+        my %linked_create = ();
         _do_create_ddl( $object->{table}, $object->{columns} );
         next if ( $object->{object} =~ /Zoe\:\:DO/ );
         next if ($object->{object} =~ /Zoe\:\:Runtime/ );
@@ -855,7 +860,7 @@ sub generate_mvc
         my $column_names;
         my $foreign_key_code = " ";
         my $primary_key;
-
+        
         #used to set up the get_column_info method
         my $column_info_string;
 
@@ -876,6 +881,7 @@ sub generate_mvc
         my $searchable_columns_string = '';
         foreach my $column (@columns)
         {
+            
             if ( $column->{to_string} )
             {
                 $to_string_member = $column->{name};
@@ -901,10 +907,11 @@ sub generate_mvc
                            $column->{member} );
                 $column_info_string .= "'$column->{name}', 'FOREIGNKEY',\n ";
 
-                #if ( $column->{linked_create} ) {
-                #   my $rel_object_name = $column->{foreign_key};
-                #  $linked_create{$rel_object_name} = $column->{member};
-                #}
+                if ( $column->{linked_create} ) {
+                   my $rel_object_name = $column->{foreign_key};
+                 # $linked_create{$rel_object_name} = $column->{member};
+                  $linked_create{$column->{member} } = $rel_object_name;
+                }
             } else
             {
                 my $input_type = $column->{input_type} || $column->{type};
@@ -977,7 +984,7 @@ sub generate_mvc
         # set has many relationships
         # linked create - show create for child /parent objects
         ##################################################
-        my %linked_create = ();
+        
         my $has_many_code = "";
         if ( defined( $object->{has_many} ) )
         {
@@ -999,7 +1006,10 @@ q^      #create array ref for has_many object unless it already exists
                 if ( $has_many->{linked_create} )
                 {
                     my $rel_object_name = $has_many->{object};
-                    $linked_create{$rel_object_name} = $has_many->{member};
+                    
+                    #$linked_create{$rel_object_name} = $has_many->{member};
+                    $linked_create{$has_many->{member} } = $rel_object_name;
+                    
                 }
                 if ( $has_many->{no_select} )
                 {
@@ -1014,6 +1024,7 @@ q^      #create array ref for has_many object unless it already exists
         my $many_to_many_code = "";
         if ( defined( $object->{many_to_many} ) )
         {
+            print Dumper $object;
             foreach my $many ( @{ $object->{many_to_many} } )
             {
                 my $member = $many->{member};
@@ -1052,7 +1063,8 @@ YML
                 if ( $many->{linked_create} )
                 {
                     my $rel_object_name = $many->{object};
-                    $linked_create{$rel_object_name} = $many->{member};
+                    #$linked_create{$rel_object_name} = $many->{member};
+                    $linked_create{$many->{member} } = $rel_object_name;
                 }
                 if ( $many->{no_select} )
                 {
@@ -1064,10 +1076,10 @@ YML
         $model_code =~
           s/\#__MANYTOMANY__/\#__MANYTOMANY__\n$many_to_many_code\n/gmx;
         my $linked_create_code = '';
-        foreach my $object_name ( keys(%linked_create) )
+        foreach my $rel_member ( keys(%linked_create) )
         {
-            my $rel_member = $linked_create{$object_name};
-            $linked_create_code .= "'$object_name'=> '$rel_member',\n";
+            my $object_name = $linked_create{$rel_member};
+            #$linked_create_code .= "'$object_name'=> '$rel_member',\n";
             $linked_create_code .= " '$rel_member'=> '$object_name',\n";
         }
         $model_code =~ s/\#__LINKEDCREATE__/$linked_create_code/gmx;

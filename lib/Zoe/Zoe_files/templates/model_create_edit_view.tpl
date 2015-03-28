@@ -8,8 +8,8 @@
 % $object_action	= $type . $object_action;
 % $object_action =~ s/\:\:/_/g;
 % $object_action = lc ($object_action);
+% my %linked_create = %{$object->get_linked_create()};
 
-%== dumper %auth_object_info ;
 % my $url = url_for( $object_action );
 % $url = url_for( $object_action , id=>$object->get_primary_key_value) if ($object->get_primary_key_value);
     
@@ -25,7 +25,7 @@
     
         <fieldset>
 
-%== get_inputs_for_dataobject( object=>$object, resolve_relationships => 1, prettyfy => 1, %helper_options, ignore => \@ignore );
+%== get_inputs_for_dataobject( object=>$object, resolve_relationships => 1, prettyfy => 1, %helper_options, ignore => \@ignore, linked_create =>\%linked_create );
 
 % # if authobject display 
 
@@ -60,7 +60,7 @@
 % my %many_info = (%info2, %info1);
 
 % my %no_select = $object->get_no_select(); 
-% my %linked_create = %{$object->get_linked_create()};
+
 % foreach my $member_name ( keys( %many_info ) ) {
 %   unless ($no_select{$member_name} )	{
         <div class="form-group">

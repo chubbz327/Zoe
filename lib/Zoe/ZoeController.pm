@@ -133,7 +133,6 @@ sub create
     my $message = $args{message} || "$type created";
     my $object = $type->new();
 
-
     my $url = ( $args{url} || $self->_get_success($object) );
 
     $object = $self->_set_values_from_request_param($object);
@@ -149,6 +148,7 @@ sub create
                          json => { success => $object->get_primary_key_value } )
       if $self->req->is_xhr;
     $self->redirect_to($url);
+
     return;
 }
 
@@ -390,7 +390,7 @@ sub show
     my %args = @_;
     my $type = my $__TYPE__ =
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
-      
+
     eval "use $type";
 
     my $template    = $args{template}    || 'zoe/show';
@@ -616,16 +616,18 @@ sub _set_values_from_request_param
 {
 
     my ( $self, $object ) = @_;
-    my $pkey_name   = $object->get_primary_key_name();
-    my @columns     = $object->get_column_names();
-    my %column_info = $object->get_column_info();
-    my $log         = $self->get_logger('debug');
+    my $pkey_name     = $object->get_primary_key_name();
+    my @columns       = $object->get_column_names();
+    my %column_info   = $object->get_column_info();
+    my $log           = $self->get_logger('debug');
+    my %linked_create = $object->get_linked_create();
 
     foreach my $column (@columns)
     {
-        my $input_type = $column_info{$column};
-        my $method     = "set_$column";
-        my $get_method = "get_$column";
+        my $member_name = $object->get_member_for_column($column);
+        my $input_type  = $column_info{$column};
+        my $method      = "set_$column";
+        my $get_method  = "get_$column";
         next if ( $column eq $pkey_name );
 
         if ( $input_type eq 'file' )
@@ -639,6 +641,24 @@ sub _set_values_from_request_param
 
                 $object->$method($public_path);
 
+            }
+
+        } elsif (    ( defined($member_name) )
+                  && ( defined( $linked_create{$member_name} ) )
+                  && $self->param($column) ) 
+        {
+            if ( $self->param($column) =~ /^\d+$/ )
+            {    #object was selected from drop dwon
+                $object->{$column} = $self->param($column);
+            } else
+            {
+                my $type = $linked_create{$member_name};
+                eval "use $type";
+                
+                my $belongs_to_ob = $type->new(%{json_to_perl( $self->param($column) )});
+                $belongs_to_ob->save();
+                $object->{$column} = $belongs_to_ob->get_primary_key_value();
+                
             }
 
         } else

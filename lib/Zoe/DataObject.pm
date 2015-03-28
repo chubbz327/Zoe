@@ -93,6 +93,7 @@ sub new
   $dsn = "dbi:SQLite:dbname=$dbfile";
   $self->{DBH} = DBI->connect( $dsn, "", "" )
     or confess "Can't connect to database: ", $DBI::errstr;
+  
  } else
  {
   $dsn = "DBI:$DBTYPE:database=$dbname;host=$host;port=$port";
