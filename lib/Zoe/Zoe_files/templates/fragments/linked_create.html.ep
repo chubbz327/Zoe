@@ -3,25 +3,29 @@
 %   my $linked_object_short_name = $linked_object->get_object_type;
 %   $linked_object_short_name  =~ s/.*\:\:(\w+)$/$1/gmx;
            <div>
+              
               <button type="button" class="btn btn-link"
-                 id="new_<%=$linked_object_short_name%>_button"
-                 onclick="toggle_add('#new_<%=$linked_object_short_name%>', 
-                                    '<%=$linked_object_short_name%>', 
-                                    '#new_<%=$linked_object_short_name%>_button'
+                 id="new_<%=$member_name%>_button"
+                 onclick="toggle_add('#new_<%=$member_name%>', 
+                                    '<%=$member_name%>', 
+                                    '#new_<%=$member_name%>_button'
                                      )">
-                  New <%= $linked_object_short_name %> 
+                  New <%= $member_name %> 
               </button>
+              
+              
+              
            </div>
-           <div id='previously_added_<%=$linked_object_short_name%>'> </div>
+           <div id='previously_added_<%=$member_name%>'> </div>
            
-           <div class='well' id="new_<%=$linked_object_short_name%>" style='display:none;'>
+           <div class='well' id="new_<%=$member_name%>" style='display:none;'>
               <%== get_inputs_for_dataobject( object=>$linked_object, resolve_relationships => 1,  prettyfy => 1,
-                      exclude=>[$object->get_object_type], prefix=> "ADD_" . $linked_object_short_name . "_" ); %>
+                      exclude=>[$object->get_object_type],  ); %>
                       
 %   my $to_string_name = $linked_object->get_to_string_member() || '0';
               <button type="button" class="btn btn-default"
-                  onclick="add_to_request_param(  '<%=$member_name%>', 'ADD_<%= $linked_object_short_name%>_', 
-                                                  '<%=$linked_object_short_name%>', '<%= $to_string_name%>' 
+                  onclick="add_to_request_param(  '<%=$column_name%>', 'ADD_<%= $member_name%>_', 
+                                                  '<%=$member_name%>', '<%= $to_string_name%>', 1 
                                                   )">
                   Add <%= $linked_object_short_name %>
                </button>

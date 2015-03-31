@@ -32,7 +32,6 @@ use YAML::XS;
 
 use Mojo::Template;
 
-our $VERSION = '0.52';
 my (
     $application_config_file, #yaml config file for app
     $application_description, #applicaiton description read from yml
@@ -763,13 +762,23 @@ sub generate_mvc
         _do_create_ddl( $object->{table}, $object->{columns} );
         next if ( $object->{object} =~ /Zoe\:\:DO/ );
         next if ($object->{object} =~ /Zoe\:\:Runtime/ );
-
+        
+        
+        
+        my $model_code = _get_model_code();
+        
+        my $eval_to_string = $object->{eval_to_string} || '';
+        $model_code =~ s/\#__EVALTOSTRING__/$eval_to_string/gmx;
+        
+        
+        
+        
         #Authorization
         my $is_auth_object   = 0;
         my $auth_object_info = '';
         my $type             = $object->{object};
         my $lib_path;
-        my $model_code = _get_model_code();
+        
 
         #Set the object_route
 
@@ -1096,8 +1105,20 @@ YML
     _set_initial_values( \@objects );
     $runtime->{name} = time();
     
+    my $shell_pl =
+      read_file( file( $ZOE_FILES, 'templates', 'shell.pl.tpl' ) );
+    my $repleval = _get_repl_eval(\@objects);
+    $shell_pl =~ s/\#__REPLEVAL__/$repleval/gmx;  
+    my $use_statements = _get_use_statement(\@objects);
+    $shell_pl =~ s/\#__USESTATEMENT__/$use_statements/gmx; 
+    my $file = file( $application_location, 'script', 'shell.pl' );
+    write_file( "$file", $shell_pl ) or croak "$file: $!";
+    
+    chmod 0750, "" . $file or die "Couldn't chmod $file: $!";
     return;
-}
+    
+    
+ }
 
 sub _set_initial_values
 {
@@ -1398,6 +1419,16 @@ sub _write_views
     return;
 }
 
+sub _get_repl_eval {
+    my $objects_ref = shift;
+    my $use_string  = '';
+    foreach my $object ( @{$objects_ref} )
+    {
+        my $object_name = $object->{object};
+        $use_string .= "\$repl->eval('use $object_name');\n";
+    }
+    return $use_string;
+}
 sub _get_use_statement
 {
     my $objects_ref = shift;
@@ -1476,7 +1507,7 @@ zoe-generator - Application Scaffolding for L<Mojolicious> Framework
 
 =head1 VERSION
 
-This documentation refers to Zoe, and the zoe-generator version 0.4
+This documentation refers to Zoe, and the zoe-generator 
 
 =head1 USAGE
 

@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use ExtUtils::MakeMaker;
 WriteMakefile(
- VERSION          => '0.62',
+ VERSION          => '0.35',
  AUTHOR           => 'dinni bartholomew <dinnibartholomew@gmail.com>',
  LICENSE          => 'artistic_2',
  MIN_PERL_VERSION => '5.010001',
@@ -32,6 +32,10 @@ WriteMakefile(
   'YAML::XS'              => '0',
   'Business::PayPal::NVP' => '0',
   'JSON::Any' => '0',
+  'Devel::REPL' => '0',
+  'Lexical::Persistence' => '0',
+  'Data::Dump::Streamer'=> '0',
+  
  },
  EXE_FILES => [qw( script/zoe-generator )],
  test      => { TESTS => 't/*.t' }

@@ -120,6 +120,10 @@ sub get_column_display {
 
 sub to_string {
 	my $self = shift;
+	
+	my $__EVALTOSTRING__ = '#__EVALTOSTRING__';
+	return eval ($__EVALTOSTRING__) if (length($__EVALTOSTRING__));
+	
 	return $self->{
 	 '#__TOSTRINGMEMBER__' 
 	};

@@ -620,11 +620,11 @@ sub _set_values_from_request_param
     my @columns       = $object->get_column_names();
     my %column_info   = $object->get_column_info();
     my $log           = $self->get_logger('debug');
-    my %linked_create = $object->get_linked_create();
+    my %linked_create = %{$object->get_linked_create()};
 
     foreach my $column (@columns)
     {
-        my $member_name = $object->get_member_for_column($column);
+        my $member_name = $object->get_member_for_column($column) || 0;
         my $input_type  = $column_info{$column};
         my $method      = "set_$column";
         my $get_method  = "get_$column";
@@ -643,7 +643,7 @@ sub _set_values_from_request_param
 
             }
 
-        } elsif (    ( defined($member_name) )
+        } elsif (    ( defined($column) )
                   && ( defined( $linked_create{$member_name} ) )
                   && $self->param($column) ) 
         {
@@ -652,6 +652,7 @@ sub _set_values_from_request_param
                 $object->{$column} = $self->param($column);
             } else
             {
+               # print Dumper $object;
                 my $type = $linked_create{$member_name};
                 eval "use $type";
                 

@@ -301,6 +301,7 @@ sub _get_inputs_for_dataobject
                 'fragments/linked_create',
                 linked_object => $fk_type->new(),
                 member_name => $fk_member,
+                column_name => $column_name,
                 );
              }  
         } else
