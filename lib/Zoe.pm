@@ -48,6 +48,7 @@ my (
     $runtime,                 #application runtime,
     $application_runtime_type,    #generated class that represents app runtime
     $mojolicious_template,
+    @import_files,
 );
 
 BEGIN
@@ -151,11 +152,53 @@ sub generate_application
     }
 
     #dinni
+     local $YAML::SortKeys = 0;
     my $runtime_string = YAML::XS::DumpFile( $runtime_yml, $runtime )
       or die "$!";
-   
+
 }
 
+sub _import_files
+{
+    my %import_hash;
+    my $time = time();
+    foreach my $file (@import_files)
+    {
+        my $config = YAML::XS::LoadFile($file)
+          or croak " YAML Parse error in $file" . $!;
+
+        my $tmp_ref;
+        $tmp_ref =
+          Hash::Merge->new('RETAINMENT_PRECEDENT')
+          ->merge( $config, \%import_hash )
+          if (%import_hash);
+        if ($tmp_ref)
+        {
+            %import_hash = %$tmp_ref;
+        } else
+        {
+
+            %import_hash = %$config;
+        }
+
+    }
+    foreach my $type ( keys(%import_hash) )
+    {
+        print $type . "TYPE \n";
+        my @all_data = @{ $import_hash{$type} };
+        foreach my $data (@all_data)
+        {
+            my $object = $type->new( %{$data} );
+            $object->save( force_insert => 1 );
+        }
+    }
+    my $file_name = 'backup_' . 'all_models_' . $time . '.yaml';
+    my $save_file =
+      file( $application_location, 'config', $file_name );
+     local $YAML::SortKeys = 0;
+    YAML::XS::DumpFile( $save_file, \%import_hash )
+      or croak "could not save $file_name";
+}
 ############################################
 # Usage      : private
 # Purpose    : Read arguments and set values
@@ -176,6 +219,7 @@ sub zoe_init
     $no_ddl              = $arg{no_ddl};
     $do_replace_existing = $arg{replace};
     $is_verbose          = $arg{is_verbose};
+    @import_files        = @{ $arg{'import'} };
 
     #$application_description_string = $arg{application_description};
     @application_files = @{ $arg{application_config_file} };
@@ -187,7 +231,6 @@ sub zoe_init
             my $config = YAML::XS::LoadFile($file)
               or croak " YAML Parse error in $application_config_file" . $!;
 
-           
             my $tmp_ref;
             $tmp_ref =
               Hash::Merge->new('RETAINMENT_PRECEDENT')
@@ -215,17 +258,16 @@ sub zoe_init
         %tmp_hash = %$tmp_ref;
     }
 
-    #add runtime
-#    my $file = file( $ZOE_FILES, 'yaml', 'runtime_model.yml' );
-#    my $config = YAML::XS::LoadFile($file)
-#      or croak " YAML Parse error in runtime_model.yml" . $!;
-#    my $tmp_ref =
-#      Hash::Merge->new('RETAINMENT_PRECEDENT')->merge( $config, \%tmp_hash );
-#    %tmp_hash = %$tmp_ref;
+  #add runtime
+  #    my $file = file( $ZOE_FILES, 'yaml', 'runtime_model.yml' );
+  #    my $config = YAML::XS::LoadFile($file)
+  #      or croak " YAML Parse error in runtime_model.yml" . $!;
+  #    my $tmp_ref =
+  #      Hash::Merge->new('RETAINMENT_PRECEDENT')->merge( $config, \%tmp_hash );
+  #    %tmp_hash = %$tmp_ref;
 
     $application_description->[0] = \%tmp_hash;
 
-    
     #Set application name
     $application_name =
       $application_description->[0]->{serverstartup}->{application_name};
@@ -261,7 +303,7 @@ sub zoe_init
       . $application_name_LC;
     msg( "Generating $application_name $application_location", 1 );
 
-    $runtime = $application_description->[0] ;
+    $runtime = $application_description->[0];
 
     # create mojolicious template
     $mojolicious_template = Mojo::Template->new;
@@ -307,12 +349,16 @@ sub _write_tests
         #do not generate tests for zoe runtime objects
         next if ( $object_name =~ /Zoe\:\:Runtime/ );
         next if ( $object_name =~ /Zoe\:\:DO/ );
-        
+
         #do not generate tests for authentication objects
-       
-        my $role_regex = $application_description->[0]->{authorization}->{config}->{data_object}->{role_object} || 0;
-        #my $user_regex = $application_description->[0]->{authorization}->{config}->{data_object}->{user_object} || 0;
+
+        my $role_regex =
+          $application_description->[0]->{authorization}->{config}
+          ->{data_object}->{role_object} || 0;
+
+#my $user_regex = $application_description->[0]->{authorization}->{config}->{data_object}->{user_object} || 0;
         $role_regex =~ s/\:/\\:/g;
+
         #$user_regex =~ s/\:/\\:/g;
         #next if ( $object_name =~ /$role_regex/ );
         #next if ( $object_name =~ /$user_regex/ );
@@ -445,7 +491,7 @@ sub _copy_fragments
     my $to   = dir( $application_location, 'templates', 'fragments' );
     dircopy( "$from", "$to", )
       or die "Could not copy fragments directory: $from $to\n$!";
-     
+
 }
 ############################################
 # Usage      : private
@@ -515,7 +561,8 @@ sub _write_layout
     msg( "Created $layout_dir", $is_verbose );
     unless ( ( !-e $layout_out ) || ($do_replace_existing) )
     {
-        debug( "$layout_out exists; specify --repace to overwrite", $is_verbose );
+        debug( "$layout_out exists; specify --repace to overwrite",
+               $is_verbose );
 
         #return;
     }
@@ -538,31 +585,26 @@ sub generate_mojo_app
          $is_verbose );
     my $mojo_message = `mojo generate app $application_name`;
     msg( $mojo_message, $is_verbose );
-    
+
     ##copy application_directory to temp dirctory
     ## this is in the event that the script is run from install path
-    my $tmp_dir_name = time(); 
+    my $tmp_dir_name          = time();
     my $application_directory = decamelize($application_name);
-    
-    dircopy( $application_directory, $tmp_dir_name ) or croak
-      "Could not create temporary directory $tmp_dir_name:$!\n";
-    
+
+    dircopy( $application_directory, $tmp_dir_name )
+      or croak "Could not create temporary directory $tmp_dir_name:$!\n";
+
     remove_tree($application_directory)
       or croak
       "Could not remove temporary directory $application_directory:$!\n";
-      
-    
+
     dircopy( $tmp_dir_name, "$application_location" )
       or croak
       "Could not move: $application_directory  $application_location\n$!";
-    
-    
+
     remove_tree($tmp_dir_name)
-      or croak
-      "Could not remove temporary directory $tmp_dir_name:$!\n";
-      
-    
-    
+      or croak "Could not remove temporary directory $tmp_dir_name:$!\n";
+
     my $from_asset = dir( $ZOE_FILES,            'public' );
     my $to_asset   = dir( $application_location, 'public' );
 
@@ -761,24 +803,18 @@ sub generate_mvc
         my %linked_create = ();
         _do_create_ddl( $object->{table}, $object->{columns} );
         next if ( $object->{object} =~ /Zoe\:\:DO/ );
-        next if ($object->{object} =~ /Zoe\:\:Runtime/ );
-        
-        
-        
+        next if ( $object->{object} =~ /Zoe\:\:Runtime/ );
+
         my $model_code = _get_model_code();
-        
+
         my $eval_to_string = $object->{eval_to_string} || '';
         $model_code =~ s/\#__EVALTOSTRING__/$eval_to_string/gmx;
-        
-        
-        
-        
+
         #Authorization
         my $is_auth_object   = 0;
         my $auth_object_info = '';
         my $type             = $object->{object};
         my $lib_path;
-        
 
         #Set the object_route
 
@@ -869,7 +905,7 @@ sub generate_mvc
         my $column_names;
         my $foreign_key_code = " ";
         my $primary_key;
-        
+
         #used to set up the get_column_info method
         my $column_info_string;
 
@@ -890,7 +926,7 @@ sub generate_mvc
         my $searchable_columns_string = '';
         foreach my $column (@columns)
         {
-            
+
             if ( $column->{to_string} )
             {
                 $to_string_member = $column->{name};
@@ -916,10 +952,12 @@ sub generate_mvc
                            $column->{member} );
                 $column_info_string .= "'$column->{name}', 'FOREIGNKEY',\n ";
 
-                if ( $column->{linked_create} ) {
-                   my $rel_object_name = $column->{foreign_key};
-                 # $linked_create{$rel_object_name} = $column->{member};
-                  $linked_create{$column->{member} } = $rel_object_name;
+                if ( $column->{linked_create} )
+                {
+                    my $rel_object_name = $column->{foreign_key};
+
+                    # $linked_create{$rel_object_name} = $column->{member};
+                    $linked_create{ $column->{member} } = $rel_object_name;
                 }
             } else
             {
@@ -993,7 +1031,7 @@ sub generate_mvc
         # set has many relationships
         # linked create - show create for child /parent objects
         ##################################################
-        
+
         my $has_many_code = "";
         if ( defined( $object->{has_many} ) )
         {
@@ -1015,10 +1053,10 @@ q^      #create array ref for has_many object unless it already exists
                 if ( $has_many->{linked_create} )
                 {
                     my $rel_object_name = $has_many->{object};
-                    
+
                     #$linked_create{$rel_object_name} = $has_many->{member};
-                    $linked_create{$has_many->{member} } = $rel_object_name;
-                    
+                    $linked_create{ $has_many->{member} } = $rel_object_name;
+
                 }
                 if ( $has_many->{no_select} )
                 {
@@ -1033,7 +1071,7 @@ q^      #create array ref for has_many object unless it already exists
         my $many_to_many_code = "";
         if ( defined( $object->{many_to_many} ) )
         {
-            print Dumper $object;
+            #print Dumper $object;
             foreach my $many ( @{ $object->{many_to_many} } )
             {
                 my $member = $many->{member};
@@ -1072,8 +1110,9 @@ YML
                 if ( $many->{linked_create} )
                 {
                     my $rel_object_name = $many->{object};
+
                     #$linked_create{$rel_object_name} = $many->{member};
-                    $linked_create{$many->{member} } = $rel_object_name;
+                    $linked_create{ $many->{member} } = $rel_object_name;
                 }
                 if ( $many->{no_select} )
                 {
@@ -1088,6 +1127,7 @@ YML
         foreach my $rel_member ( keys(%linked_create) )
         {
             my $object_name = $linked_create{$rel_member};
+
             #$linked_create_code .= "'$object_name'=> '$rel_member',\n";
             $linked_create_code .= " '$rel_member'=> '$object_name',\n";
         }
@@ -1104,41 +1144,55 @@ YML
     }
     _set_initial_values( \@objects );
     $runtime->{name} = time();
-    
-    my $shell_pl =
-      read_file( file( $ZOE_FILES, 'templates', 'shell.pl.tpl' ) );
-    my $repleval = _get_repl_eval(\@objects);
-    $shell_pl =~ s/\#__REPLEVAL__/$repleval/gmx;  
-    my $use_statements = _get_use_statement(\@objects);
-    $shell_pl =~ s/\#__USESTATEMENT__/$use_statements/gmx; 
+
+    my $shell_pl = read_file( file( $ZOE_FILES, 'templates', 'shell.pl.tpl' ) );
+    my $repleval = _get_repl_eval( \@objects );
+    $shell_pl =~ s/\#__REPLEVAL__/$repleval/gmx;
+    my $use_statements = _get_use_statement( \@objects );
+    $shell_pl =~ s/\#__USESTATEMENT__/$use_statements/gmx;
     my $file = file( $application_location, 'script', 'shell.pl' );
     write_file( "$file", $shell_pl ) or croak "$file: $!";
-    
+
     chmod 0750, "" . $file or die "Couldn't chmod $file: $!";
+
+    #do imports
+    _import_files();
     return;
-    
-    
- }
+
+}
 
 sub _set_initial_values
 {
     return if ($no_ddl);
+    if (@import_files)
+    {
+
+        msg( "--import specified;  intial_values ignored from app_files",
+             $is_verbose );
+
+        return;
+    }
+
+    my $time        = time();
     my $sqla        = SQL::Abstract::More->new();
     my $db_yml_tmp  = file( './', 'db.yml' );
     my $objects_ref = shift;
     my $do          = Zoe::DataObject->new( runtime => $runtime )
       or die "$db_yml_tmp $!";
     my $application_DBH = $do->get_database_handle();
+    my $return;
 
     #get keys from object_ref and if == object add to use statement
     foreach my $object ( @{$objects_ref} )
     {
+        my $object_type = $object->{object};
         ###
         # save initial_values
         #
         if ( $object->{initial_values} )
         {
-            my $object_type = $object->{object};
+            $return = {} unless $return;
+
             foreach my $initial_value ( @{ $object->{initial_values} } )
             {
 
@@ -1148,7 +1202,14 @@ sub _set_initial_values
                 #print "INITIAL VALUES  $object_type\n"
                 # . Dumper %{$initial_value};
                 $initial_object->save;
+
             }
+
+            #create backup yml
+            my @all = $object_type->find_all();
+
+            $return->{$object_type} = \@all;
+
         }
         ##do inserts on join tables
         if ( $object->{insert} )
@@ -1170,6 +1231,16 @@ sub _set_initial_values
                 }
             }
         }
+
+    }
+    if ($return)
+    {
+
+        my $file_name = 'backup_' . 'all_models_' . $time . '.yaml';
+        my $save_file = file( $application_location, 'config', $file_name );
+         local $YAML::SortKeys = 0;
+        YAML::XS::DumpFile( $save_file, $return )
+          or croak "could not save $file_name";
     }
 }
 
@@ -1419,7 +1490,8 @@ sub _write_views
     return;
 }
 
-sub _get_repl_eval {
+sub _get_repl_eval
+{
     my $objects_ref = shift;
     my $use_string  = '';
     foreach my $object ( @{$objects_ref} )
@@ -1429,6 +1501,7 @@ sub _get_repl_eval {
     }
     return $use_string;
 }
+
 sub _get_use_statement
 {
     my $objects_ref = shift;

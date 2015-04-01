@@ -32,6 +32,16 @@ sub startup {
     my $self = shift;
     my %OBJECT_FOR_URL = ();
 
+    #returns path to the config dir
+    $self->helper(
+            get_config_dir => sub {
+               return 
+                  dir( dirname(__FILE__), '..', 'config',   );
+               
+            }
+        );      
+    
+    
     #   Runtime
     #   Reads runtime.yml and return as Zoe::Runtime
     $self->helper(
@@ -40,11 +50,10 @@ sub startup {
               file( dirname(__FILE__), '..', 'config', 'runtime.yml' );
             if ( -e $runtime_yml ) {
                 my $runtime_config = 0;
-                $runtime_config = YAML::XS::LoadFile($runtime_yml)
-                  or croak " YAML Parse error in $runtime_yml";
+                return $runtime_config = YAML::XS::LoadFile($runtime_yml)
+                  or croak " FATAL YAML Parse error in $runtime_yml";
                   
-                my $runtime = Zoe::Runtime->new(%$runtime_config);  
-                return $runtime || 0;
+               
             }
 
             return 0;
@@ -323,6 +332,11 @@ sub startup {
     #add route for portals
     $r->any('/__PORTAL__/:__PORTAL__/:__PAGE__')->name('__handle_portal_request__')
     	->to( namespace =>'ZoeController', action =>'handle_portal_request');
+    
+    #add save all models route
+    $r->any('//#__URLPREFIX__/__SAVEALLMODELS__/')->name('__SAVEALLMODELS__')
+	->to( namespace =>'Zoe::ZoeController', action =>'save_all_models');
+    
        
 }
 1;

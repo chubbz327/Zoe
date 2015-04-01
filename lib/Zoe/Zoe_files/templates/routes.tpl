@@ -54,6 +54,11 @@
   action: delete 
   type: #__OBJECTTYPE__
 
-
+- method: any
+  path: #__URLPREFIX__#__OBJECTROUTE___save_all
+  name: #__OBJECTNAME___save_all
+  controller: #__CONTROLLER__
+  action: save_all 
+  type: #__OBJECTTYPE__
 
 

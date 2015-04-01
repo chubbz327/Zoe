@@ -14,8 +14,92 @@ use Pod::Simple::Search;
 
 BEGIN { unshift @INC, "$FindBin::Bin/../" }
 use Data::GUID;
-
+use Path::Class;
 my $layout = 'zoe';
+
+sub save_all_models
+{
+    my $self    = shift;
+    my %args    = @_;
+    my $runtime = $self->get_runtime();
+    my $models  = $runtime->{models};
+    my $return  = {};
+    foreach my $model ( @{$models} )
+    {
+        my $type = $model->{object};
+        my @all  = $type->find_all();
+
+        $return->{$type} = \@all;
+    }
+    my $time      = time();
+    my $file_name = 'backup_' . 'all_models_' . $time . '.yaml';
+    my $save_file = file( $self->get_config_dir(), $file_name );
+    if ( YAML::XS::DumpFile( $save_file, $return ) )
+    {
+        return
+          $self->render(
+                         json => {
+                                   success   => $time,
+                                   file_name => $save_file,
+                                   msg      => "$save_file saved",
+                         }
+          );
+    } else
+    {
+        $self->log(" YAML save error  $save_file: $!");
+        return
+          $self->render(
+                         json => {
+                                   success => 0,
+                                   error   => "YAML save error  $save_file: $!",
+                         }
+          );
+    }
+}
+
+sub save_all
+{
+    my $self = shift;
+    my %args = @_;
+    my $type = my $__TYPE__ =
+      $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
+    eval "use $type";
+
+    my @all    = $type->find_all();
+    my $return = {};
+
+    $return->{$type} = \@all;
+
+    my $file_name = $type;
+    $file_name = lc($file_name);
+    $file_name =~ s/\:\:/_/gmx;
+    my $time = time();
+    $file_name = 'backup_' . $file_name . '_' . $time . '.yaml';
+
+    my $save_file = file( $self->get_config_dir(), $file_name );
+
+    if ( YAML::XS::DumpFile( $save_file, $return ) )
+    {
+        return
+          $self->render(
+                         json => {
+                                   success   => $time,
+                                   file_name => $save_file,
+                         }
+          );
+    } else
+    {
+        $self->log(" YAML save error  $save_file: $!");
+        return
+          $self->render(
+                         json => {
+                                   success => 0,
+                                   error   => "YAML save error  $save_file: $!",
+                         }
+          );
+    }
+
+}
 
 sub show_documentation
 {
@@ -620,7 +704,7 @@ sub _set_values_from_request_param
     my @columns       = $object->get_column_names();
     my %column_info   = $object->get_column_info();
     my $log           = $self->get_logger('debug');
-    my %linked_create = %{$object->get_linked_create()};
+    my %linked_create = %{ $object->get_linked_create() };
 
     foreach my $column (@columns)
     {
@@ -645,21 +729,22 @@ sub _set_values_from_request_param
 
         } elsif (    ( defined($column) )
                   && ( defined( $linked_create{$member_name} ) )
-                  && $self->param($column) ) 
+                  && $self->param($column) )
         {
             if ( $self->param($column) =~ /^\d+$/ )
             {    #object was selected from drop dwon
                 $object->{$column} = $self->param($column);
             } else
             {
-               # print Dumper $object;
+                # print Dumper $object;
                 my $type = $linked_create{$member_name};
                 eval "use $type";
-                
-                my $belongs_to_ob = $type->new(%{json_to_perl( $self->param($column) )});
+
+                my $belongs_to_ob =
+                  $type->new( %{ json_to_perl( $self->param($column) ) } );
                 $belongs_to_ob->save();
                 $object->{$column} = $belongs_to_ob->get_primary_key_value();
-                
+
             }
 
         } else

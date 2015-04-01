@@ -1,6 +1,6 @@
 
 
-<script src="/assets/js/zoe.js"></script>
+
 
 % layout $layout;
 % my %helper_options = %{ $helper_opts }; 

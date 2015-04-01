@@ -753,6 +753,9 @@ sub new
 sub save
 {
  my $self = shift;
+ my %args = @_;
+ my $force_insert = $args{force_insert} || 0;
+ 
  my $dbh  = $DBConnection->get_DBH();
 
  #my $dbh    = $self->{DBH};
@@ -770,7 +773,7 @@ sub save
 
  Zoe::DataObject::Logger::debug( "Begin save: $table_name id: id",
                                  $is_verbose );
- if ( $self->{$pkey_name} )
+ if( ( $self->{$pkey_name} ) && (! $force_insert) )
  {
   #update
   Zoe::DataObject::Logger::debug( "Updating $table_name", $is_verbose );

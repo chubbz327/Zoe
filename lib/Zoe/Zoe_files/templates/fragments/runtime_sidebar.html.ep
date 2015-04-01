@@ -1,5 +1,26 @@
-%      foreach my $key_name (@$runtime_keys) {
-           <li class='model_sidebar'><a href='#<%= $key_name %>'>
+           <li class='model_sidebar'>
+           
+           
+           <a href='<%=url_for("__SHOW_RUNTIME__", key=>0) %>'>
+           
+           
+            <i class='icon-chevron-right'></i> 
+            Runtime
+            </a>
+            </li>
+
+%      foreach my $key_name (keys (%$runtime) ) {
+% if ($key_name =~ /$key/ ) {
+        <li class='active'>
+% } else {
+           <li class='model_sidebar'>
+           
+       % }     
+           <a href='<%=url_for("__SHOW_RUNTIME_KEY__", key=>$key_name) %>'>
+           
+           
             <i class='icon-chevron-right'></i> 
             <%= $key_name %></a></li> 
+            </a>
+            </li>
 %      }

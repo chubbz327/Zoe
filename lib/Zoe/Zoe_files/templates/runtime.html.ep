@@ -1,53 +1,76 @@
 %layout 'zoe';
-% use Data::Dumper::HTML qw(dumper_html);
+% use YAML::XS;
 
 % use JSON::Any;
 
+% if ($key) {
+ <h1><%= $key %> </h1>
+% } else {
+<h1>Runtime</h1>
+
+% }
+
+<p>
 
 
-<div id="metawidget"></div>
-		<script type="text/javascript">
-			var mw = new metawidget.Metawidget( document.getElementById( 'metawidget' ),
-			
-			
- {
-	
-	inspector: function( toInspect, type, names ) {
+<div id='message' >
+<%= $message %>
+%= flash 'message'
+</div>
 
-		return <%== $runtime->get_form_schema %>;
-	}
-}
+<form   method='POST' action='<%= url_for("__SAVE_RUNTIME__") %>' 
+            id='form_'
+            enctype="multipart/form-data"
+            class="form-horizontal" role="form">
+             
+             <input type='hidden' name='key' value='<%= $key %>'>
+	<textarea name='runtime' id="code"><%== YAML::XS::Dump( $selected_ref ) %>
+	</textarea>
+	 
+	<p>
+        
+    <div id='submit' class='btn-group btn-group-lg' role='group'>
+        <input id='runtime_submit' class="btn btn-default btn-primary" type="submit" value="Save"  >
+              
+    </div>
+</form>
 
-
-);
-
-mw.buildWidgets();
-			
-		</script>
-
+ 
+<script>
+var editor= CodeMirror.fromTextArea(document.getElementById("code"), 
+		{ mode: 'yaml',
+    theme: '3024-night'
+    
+		});
+var is_runtime_valid =0;
  
 
 
 
+$(document).ready(function() {
+	
+    
+    
+});
 
-
-<script type="text/javascript">
-$( document ).ready(function() {
-console.log('reading runtime object ');
-
-	var $runtime = <%== $runtime->get_JSON %>;
+function validateRuntime(){
+	alert('here');
+	var content = $('#code').text();
+	try {
+		YAML.parse(content);
+	} catch (ex){
+		$('#message').html('Validation failed for yaml');
+		console.log(JSON.stringify(ex));
+	}
 	
 	
-
-
-
-
-
-
-
-
-}  );
+}
 </script>
+
+
+ 
+
+
 
 
 

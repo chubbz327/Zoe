@@ -6,21 +6,24 @@ use strict;
 use warnings;
 use FindBin;
 use Carp;
-
+use Data::Dumper;
 BEGIN {
     unshift @INC, "$FindBin::Bin/../lib";
 }
 use Zoe;
 use Getopt::Long;
 
-my ($is_verbose, @application_config_files, $no_ddl, $do_replace_existing ) = undef;
+my ($is_verbose, @application_config_files, $no_ddl, $do_replace_existing, @import ) = undef;
 
 GetOptions(
     'verbose!'   => \$is_verbose,
     'no_ddl!'    => \$no_ddl,
     'app_file=s' => \@application_config_files,
     'replace'    => \$do_replace_existing,
+    'import=s'    => \@import,
+    
 );
+
 
 _usage() unless (@application_config_files);
 
@@ -34,6 +37,7 @@ Zoe->new()->generate_application( application_config_file => \@application_confi
           no_ddl => $no_ddl,
           is_verbose => $is_verbose,  
           replace => $do_replace_existing,
+          'import' => \@import,
 
         );
 

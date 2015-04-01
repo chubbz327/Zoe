@@ -3,6 +3,12 @@
   name: __SHOW_RUNTIME__
   controller: Zoe::RuntimeController
   action: show  
+
+- method: get
+  path: #__URLPREFIX____RUNTIME__/:key
+  name: __SHOW_RUNTIME_KEY__
+  controller: Zoe::RuntimeController
+  action: show  
   
 - method: post
   path: #__URLPREFIX____RUNTIME__/
