@@ -18,6 +18,7 @@ use SQL::Abstract;
 use SQL::Translator;
 use File::Touch;
 use File::Copy::Recursive qw(dircopy);
+use File::NCopy;
 use File::Slurp;
 use Lingua::EN::Inflect qw ( PL);
 use String::CamelCase qw(decamelize);
@@ -141,6 +142,13 @@ sub generate_application
 
     #make config dir under the mojo app
     make_path( "" . $dir ) unless ( -d $dir );
+    
+    my $import_dir  = dir( $application_location, '..', 'yaml', 'import' );
+    make_path( "" . $import_dir) unless ( -d $import_dir );
+    
+    my $runtime_dir  = dir( $application_location, '..', 'yaml', 'runtime' );
+    make_path( "" . $runtime_dir) unless ( -d $runtime_dir );
+    
 
     my $runtime_yml = file( $application_location, 'config', "runtime.yml" );
     if ( -e $runtime_yml )
@@ -219,7 +227,9 @@ sub zoe_init
     $no_ddl              = $arg{no_ddl};
     $do_replace_existing = $arg{replace};
     $is_verbose          = $arg{is_verbose};
-    @import_files        = @{ $arg{'import'} };
+    if (defined($arg{'import'})){
+        @import_files        = @{ $arg{'import'} };
+    }
 
     #$application_description_string = $arg{application_description};
     @application_files = @{ $arg{application_config_file} };
@@ -489,8 +499,14 @@ sub _copy_fragments
 {
     my $from = dir( $ZOE_FILES,            'templates', 'fragments' );
     my $to   = dir( $application_location, 'templates', 'fragments' );
+    
+    if($do_replace_existing ){
+        remove_tree($to);
+    }
+    
     dircopy( "$from", "$to", )
-      or die "Could not copy fragments directory: $from $to\n$!";
+      or die "Could not copy fragments directory: $from $to\n$!"
+      unless ($to);
 
 }
 ############################################
@@ -608,8 +624,16 @@ sub generate_mojo_app
     my $from_asset = dir( $ZOE_FILES,            'public' );
     my $to_asset   = dir( $application_location, 'public' );
 
+    if($do_replace_existing ){
+        remove_tree($to_asset);
+    }
+
+
     dircopy( "" . $from_asset, "" . $to_asset )
-      or croak "could not copy $from_asset to $to_asset: $!";
+      or croak "could not copy $from_asset to $to_asset: $!"
+      unless (-d $to_asset);
+      
+      
     msg( "Copied $from_asset\n\tto $to_asset", $is_verbose );
 
     #make applicaiton lib directory
@@ -1333,6 +1357,8 @@ sub _write_startup_code
     $startup_code =~ s/\#__ENVIRONMENTVAR__/$environment_str/gmx;
     $startup_code =~ s/\#__URLPREFIX__/$url_prefix/gmx;
     $startup_code =~ s/\#__USESTATEMENTS__/$use_statement_string/gmx;
+    my $startup_script = decamelize($application_name);
+    $startup_code =~ s/\#__STARTUPSCRIPT__/$startup_script/gmx;
     my $file = file( $application_location, 'lib', $application_name . ".pm" );
     write_file( "$file", $startup_code ) or croak "$file: $!";
     return;
@@ -1414,6 +1440,12 @@ sub _write_views
     my $runtime_file = file( $ZOE_FILES, 'templates', 'runtime.html.ep' );
     copy( $runtime_file, dir( $application_location, "templates", 'zoe' ) )
       or croak "Could not copy $runtime_file";
+      
+     #manage
+     my $manage_file = file( $ZOE_FILES, 'templates', 'manage.html.ep' );
+    copy( $manage_file, dir( $application_location, "templates", 'zoe' ) )
+      or croak "Could not copy $manage_file";
+      
 
     #copy signin
     my $signin_file = file( $ZOE_FILES, 'templates', 'signin.html.ep' );

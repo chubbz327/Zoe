@@ -12,7 +12,7 @@
     <meta name="author" content="">
     <link rel="icon" href="../../favicon.ico">
 
-    <title>Carousel Template for Bootstrap</title>
+    <title></title>
     <!-- Zoe CSS -->
     <link href="/assets/css/zoe.css" rel="stylesheet">
     
@@ -91,8 +91,9 @@
           <ul class="nav navbar-nav">
             <li class="active"><a href="/#__URLPREFIX__">Models</a></li>
             <li><a href="/#__URLPREFIX____RUNTIME__">Runtime</a></li>
+            <li><a href="/#__URLPREFIX____MANAGE__">Manage</a></li>
             <li><a href="/#__URLPREFIX____DOCUMENTATION__">Docs</a></li>
-            <li><a id='modelstoyml' href="#" class="btn btn-default btn-xs">Models to YAML</a></li>
+           
           </ul>
         </div><!--/.nav-collapse -->
       </div>

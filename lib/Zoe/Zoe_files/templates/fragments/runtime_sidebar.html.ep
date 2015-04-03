@@ -10,6 +10,7 @@
             </li>
 
 %      foreach my $key_name (keys (%$runtime) ) {
+% next if ( ($key_name eq 'routes' ) );
 % if ($key_name =~ /$key/ ) {
         <li class='active'>
 % } else {

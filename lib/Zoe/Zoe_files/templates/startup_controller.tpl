@@ -40,7 +40,40 @@ sub startup {
                
             }
         );      
+    #returns path to the import backup  up  dir
+    $self->helper(
+    		get_import_backup_dir => sub {
+               return 
+                  dir( dirname(__FILE__), '..', '..', 'yaml', 'import'   );
+               
+            }
+        );      
+    #returns path to the import backup  up  dir
+    $self->helper(
+    		get_runtime_backup_dir => sub {
+               return 
+                  dir( dirname(__FILE__), '..', '..', 'yaml', 'runtime'   );
+               
+            }
+        );   
     
+    #returns path to the startup script  
+    $self->helper(
+    		get_startup_script => sub {
+               return 
+               file ( dirname(__FILE__), '..', 'script','#__STARTUPSCRIPT__'   );
+               
+            }
+        );
+    
+    #returns path to the import backup  up  dir
+    $self->helper(
+    		get_lib_dir => sub {
+               return 
+               dir ( dirname(__FILE__), '..', 'lib',   );
+               
+            }
+        );
     
     #   Runtime
     #   Reads runtime.yml and return as Zoe::Runtime
@@ -334,9 +367,9 @@ sub startup {
     	->to( namespace =>'ZoeController', action =>'handle_portal_request');
     
     #add save all models route
-    $r->any('//#__URLPREFIX__/__SAVEALLMODELS__/')->name('__SAVEALLMODELS__')
-	->to( namespace =>'Zoe::ZoeController', action =>'save_all_models');
-    
+#    $r->any('//#__URLPREFIX__/__SAVEALLMODELS__/')->name('__SAVEALLMODELS__')
+#	->to( namespace =>'Zoe::ZoeController', action =>'save_all_models');
+   
        
 }
 1;
