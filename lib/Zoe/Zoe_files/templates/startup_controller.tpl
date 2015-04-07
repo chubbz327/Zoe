@@ -154,6 +154,25 @@ sub startup {
     
         }
     );
+    
+    #get portal portal
+    
+    $self->helper(
+        get_portal => sub {
+            my $self    = shift;
+            my $runtime = $self->get_runtime();
+            
+            my $portals  = $runtime->{portals} || [] ;
+            my $portal_name = $self->stash('portal');
+            
+            foreach my $portal (@{$portals}) {
+            	return $portal if ($portal_name eq $portal->{name});
+            }
+            
+            return ;
+    
+        }
+    );
         
     #   Authorization
     #   Read authorization file auth.yml return as hash
@@ -288,62 +307,48 @@ sub startup {
         my $routes = $runtime->{routes};
         my @list = ( @{ $routes } );
         
-        #add the sites routes 
-        my @site_routes = ();
-        if ($runtime->{sites}) {
-            foreach my $site ( @{$runtime->{sites} } ){
-            	my $site_name = $site->{name};
-            	my $site_prefix = $site->{url_prefix};
-            	#print Dumper ($site->{models});
-            	####default site routes created for every object reference####
-            	foreach my $model ( @{$site->{models} }) {
-            		my $obj = $model->{name}->new();
+        #add the portals routes 
+        my @portal_routes = ();
+        if ($runtime->{portals}) {
+            foreach my $portal ( @{$runtime->{portals} } ){
+            	my $url_prefix = $portal->{url_prefix};
+            	$url_prefix .= '/' unless ($url_prefix =~/\/$/);
+            	my $portal_name = $portal->{name};
+            	my $layout = $portal->{layout};
+        
+            	foreach my $page (%{$portal->{pages}}){
+            		my $path = $url_prefix . $self->{path};
+            		my $r = $self->routes;
+            		my $method = $page->{method};
+                	my $controller = $page->{controller};
+                	my $action = $page->{action};
+                	my $route_name = $page->{route_name};
             		
-            		
-            		###show 
-            		my $site_route = {};
-            		$site_route->{method}=  'get';
-            		#$site_route->{path} = sprintf('%s%s\/:id', $site_prefix, $obj->get_object_name_short_hand);  
-            		$site_route->{path} = $site_prefix .  $obj->get_object_name_short_hand . '/:id';
-            		$site_route->{name} = $site_name . '_show_' . $obj->get_object_name_short_hand;
-            		$site_route->{controller} = 'Zoe::SiteController';
-            		$site_route->{action} = 'show';  
-            		$site_route->{model} =  $obj->{TYPE} ;
-            		push (@site_routes, $site_route);
-                    
-            		
-            		##show all 
-            		$site_route = {};
-            		$site_route->{method}=  'get';
-            		#$site_route->{path} = sprintf('%s%s\/:id', $site_prefix, $obj->get_object_name_short_hand);  
-            		$site_route->{path} = $site_prefix .  $obj->get_object_name_short_hand;
-            		$site_route->{name} = $site_name . '_show_all_' . $obj->get_object_name_short_hand;
-            		$site_route->{controller} = 'Zoe::SiteController';
-            		$site_route->{action} = 'show_all';  
-            		$site_route->{model} = $obj->{TYPE} ;
-            		push (@site_routes, $site_route);
+                	my $stash = $page->{stash};
+                	my %stash = ();
+                	%stash = %{$stash} if ($stash);
+                	 
+                	$r->$method($path)
+                		->name($route_name)
+                	    ->to( namespace => $controller, action => $action ,
+                	    		portal=> $portal_name, 
+                	    		page => $route_name,
+                	    		layout => $layout,
+                	    		
+                	    		%stash,);
+                	
+            	}
             	
-                }
             	
-                #replace default with Zoe::SiteController                
-                foreach my $site_route ( @{$site->{routes} }) {
-                	if ( defined ( $site_route->{controller} ) ) {
-                		$site_route->{controller} =~ s/__DEFAULT__/Zoe::SiteController/;
-                	} else {
-                		$site_route->{controller} = 'Zoe::SiteController';
-                	}
-                	if (  defined($site_route->{action}) ) {
-                		$site_route->{action} =~ s/__DEFAULT__/pass_to_handler/;
-                	} else {
-                		$site_route->{action} = 'pass_to_handler';
-                	}
-                    push (@site_routes, $site_route);
-                }
+
+
+            	
+              
             }
         }
 
 
-        foreach my $route ( @list, @site_routes  ) {
+        foreach my $route ( @list  ) {
             my $method     = $route->{method};
             my $path       = $route->{path};
             my $name       = $route->{name};
@@ -362,9 +367,7 @@ sub startup {
 
     }
     
-    #add route for portals
-    $r->any('/__PORTAL__/:__PORTAL__/:__PAGE__')->name('__handle_portal_request__')
-    	->to( namespace =>'ZoeController', action =>'handle_portal_request');
+   
     
     #add save all models route
 #    $r->any('//#__URLPREFIX__/__SAVEALLMODELS__/')->name('__SAVEALLMODELS__')

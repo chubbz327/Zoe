@@ -64,8 +64,8 @@ models:
         
     initial_values:
     - name: admin
-    - name: web_user
-    - name: contributer  
+    - name: anonymous
+ 
         
   - object: Zoe::DO::User 
     table: ZoeDOUser

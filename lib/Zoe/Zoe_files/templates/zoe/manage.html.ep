@@ -1,0 +1,163 @@
+%layout 'zoe';
+% use YAML::XS;
+
+% use JSON::Any;
+
+
+<h1>Manage</h1>
+
+
+
+<p>
+<div id='message'><%=$message%> 
+<%= flash 'message'%>
+
+
+
+</div>
+
+
+<h3>Save Models to Yaml Dir</h3>
+
+<form method='POST' action='<%= url_for("__SAVEALLMODELS__")%>'
+	id='SaveToYAML' enctype="multipart/form-data" class="form-horizontal"
+	role="form">
+
+
+
+	<fieldset>
+		<div class="form-group">
+
+			<label class="col-sm-2 control-label" for='name'> Name </label>
+			<div class="col-sm-10">
+				<input type='text' class='required form-control' id='name'
+					name='name' value='' minlength="1" />
+			</div>
+			<!-- end input-->
+		</div>
+
+		<p />
+		<div class="form-group">
+			<div class="col-sm-offset-2 col-sm-10">
+				<input id='saveyamlbutton' type='submit' class='btn btn-success btn-lg'
+					value='SaveToYAML' />
+			</div>
+		</div>
+	</fieldset>
+	 
+	<!-- formgroup -->
+</form>
+
+
+<h3>Restart App</h3>
+
+<form method='POST' action='<%= url_for("__MANAGERESTARTAPP__")%>'
+	id='RestartApp' enctype="multipart/form-data" class="form-horizontal"
+	role="form" onsubmit=' return submitForm("#RestartApp");'>
+
+
+
+	<fieldset>
+
+
+		<p />
+		<div class="form-group">
+			<div class="col-sm-offset-2 col-sm-10">
+				<input type='submit' class='btn btn-primary btn-lg'
+					value='RestartApp' />
+			</div>
+		</div>
+	</fieldset>
+	 
+	<!-- formgroup -->
+</form>
+
+
+<h3>Generate App</h3>
+
+<form method='POST' action='<%= url_for("__MANAGEGENERATE__")%>'
+	id='GenerateApp' enctype="multipart/form-data" class="form-horizontal"
+	role="form"'>
+
+
+
+	<fieldset>
+
+
+		<div class="form-group">
+
+			<label class="col-sm-2 control-label" for='User_ID'>Runtime
+				File </label>
+			<div class="col-sm-10">
+				<select name='runtime_file' class='form-control ' id='ID' required>
+					<option value=''>Select Runtime File</option>
+                % foreach my $runtime_file (@$runtime_files) {
+                        <option value='<%=$runtime_file%>'><%=$runtime_file%></option>
+                %}
+				</select>
+			</div>
+			<!-- end input-->
+
+
+		</div>
+        <div class="form-group">
+
+            <label class="col-sm-2 control-label" for='User_ID'>Import
+                File </label>
+            <div class="col-sm-10">
+                <select name='import_file' class='form-control ' id='ID'>
+                    <option value=''>Select import File</option>
+                    % foreach my $import_file (@$import_files) {
+                        <option value='<%=$import_file%>'><%=$import_file%></option>
+                %}
+
+                </select>
+            </div>
+            <!-- end input-->
+
+
+        </div>
+
+
+		<div class="form-group">
+			<div class="col-sm-offset-2 col-sm-10">
+				<input id='generatebutton' type='submit' class='btn  btn-lg' value='GenerateApp' />
+			</div>
+		</div>
+	</fieldset>
+	 
+	<!-- formgroup -->
+</form>
+
+
+<script>
+	$(function() {
+		
+		$("#GenerateApp").validate({
+			  submitHandler: function(form) {
+				  $('#message').html = 'Processing'
+				  
+					  $('#generatebutton').prop("disabled",true);
+				  submit_form("#GenerateApp");
+				  $('#generatebutton').prop("disabled",false);
+				  document.getElementById("GenerateApp").reset();
+				   
+				  }
+				});
+		$("#SaveToYAML").validate({
+			  submitHandler: function(form) {
+				  $('#saveayamlbutton').prop("disabled",true);
+				  submit_form("#SaveToYAML");
+				  $('#saveayamlbutton').prop("disabled",false);
+				  document.getElementById("SaveToYAML").reset();
+				  //$("#SaveToYAML").reset();
+				  }
+				});
+		
+		
+ 
+
+	});
+</script>
+
+

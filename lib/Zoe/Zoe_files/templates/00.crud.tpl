@@ -81,7 +81,7 @@ foreach my $object_type (@objects_to_test) {
 ####Web tests
 ####################################
 #log in 
-    $t->post_ok('/login'  =>form =>{user=>$ADMINUSER, password=>$ADMINPASS})
+    $t->post_ok('/__ADMIN__/login'  =>form =>{user=>$ADMINUSER, password=>$ADMINPASS})
     ->status_is(302, "log in successfull");
 #make sure / works
 $t->get_ok( '/#__URLPREFIX__', '#__APPLICATIONNAME__ is up' )

@@ -41,7 +41,7 @@ sub save_all_models
                          json => {
                                    success   => $time,
                                    file_name => $save_file,
-                                   msg      => "$save_file saved",
+                                   msg       => "$save_file saved",
                          }
           );
     } else
@@ -389,15 +389,21 @@ sub show_all
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
     eval "use $type";
 
-    my $template = $args{template} || 'zoe/show_all';
-    my $limit = $args{limit} || $self->param('limit') || -1;
+    my $template =
+      $args{template} || $self->stash('template') || 'zoe/show_all';
 
-    my $where       = $args{where} || {};
+    my $limit =
+      $args{limit} || $self->param('limit') || $self->stash('limit') || -1;
+
+    my $where       = $args{where} || $self->stash('where') || {};
     my $object      = $type->new;
-    my $helper_opts = $args{helper_opts} || {};
+    my $helper_opts = $args{helper_opts} || $self->stash('helper_opts') || {};
 
-    my $order    = $self->param('order_by');
-    my $offset   = $self->param('offset') || 0;
+    my $order = $self->param('order_by') || $self->stash('order_by');
+    my $offset = $self->param('offset') || $self->stash('offset') || 0;
+    $layout = $args{layout} || $self->stash('layout') || $layout;
+    
+    
     my $order_by = [];
     if ($order)
     {
@@ -412,7 +418,7 @@ sub show_all
     );
 
     my $search;
-    $layout = $args{layout} || $layout;
+    
     my %return = (
                    search      => $search,
                    object      => $object,
@@ -436,22 +442,31 @@ sub show_all
 
     }
 
-    return $self->render( json => \@all_json ) if $self->req->is_xhr;
+    if ( $self->req->is_xhr )
+    {
+        my $page = $self->render_to_string(
+            search      => $search,
+            object      => $object,
+            limit       => $limit,
+            count       => $count,
+            offset      => $offset,
+            order_by    => $order,
+            all         => \@all,
+            template    => $template,
+            helper_opts => $helper_opts,
+            layout      => '',
+            type        => $type,
 
-    #my $header = $self->req->headers->header('X-Requested-With');
-
-    # AJAX request
-    #    if ( $header && $header eq 'XMLHttpRequest' )
-    #    {
-    #        return $self->render( json => \@all_json );
-    #    }
-
-  #    return
-  #      $self->respond_to( json => sub { $self->render( json => \@all_json ) },
-  #                         html => \%return );
-
-    #render( json => \@all );
-
+        );
+        return
+          $self->render(
+                         json => {
+                                   success => 1,
+                                   object  => \@all_json,
+                                   page    => $page,
+                         }
+          );
+    }
     return
       $self->render(
                      search      => $search,
@@ -477,15 +492,38 @@ sub show
 
     eval "use $type";
 
-    my $template    = $args{template}    || 'zoe/show';
-    my $helper_opts = $args{helper_opts} || {};
+    my $template    = $args{template}    || $self->stash('template') || 'zoe/show';
+    my $helper_opts = $args{helper_opts} || $self->stash('helper_opts') || {};
+    $layout = $args{layout} || $self->stash('layout') || $layout;
     my $id          = $self->param('id');
 
     my $object = $type->find($id);
-    $layout = $args{layout} || $layout;
-
+    
     my %obj_hash = %{$object};
-    return $self->render( json => \%obj_hash ) if $self->req->is_xhr;
+
+    if ( $self->req->is_xhr )
+    {
+        my $page =
+          $self->render_to_string(
+                                   object      => $object,
+                                   template    => $template,
+                                   helper_opts => $helper_opts,
+                                   layout      => '',
+                                   type        => $type,
+          );
+
+        #   if ajax
+        return
+          $self->render(
+                         json => {
+                                   success => 1,
+                                   object  => \%obj_hash,
+                                   page    => $page,
+                         }
+          );
+    }
+
+    # else
     return
       $self->render(
                      object      => $object,
@@ -523,7 +561,7 @@ sub show_create_edit
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
     eval "use $type";
 
-    my $template = $args{template} || 'zoe/create_edit';
+    my $template = $args{template} || $self->stash('template') || 'zoe/create_edit';
     my $object_action =
          $args{object_action}
       || $self->param('__OBJECTACTION__')
@@ -534,19 +572,42 @@ sub show_create_edit
     my $error_msg = $self->param('error_msg') || '';
     my $object    = $type->find($id) || $type->new;
 
-    my $helper_opts = $args{helper_opts} || {};
+    my $helper_opts = $args{helper_opts} || $self->stash('helper_opts') || {};
 
-    $layout = $args{layout} || $layout;
-    $self->render(
-                   object        => $object,
-                   template      => $template,
-                   helper_opts   => $helper_opts,
-                   layout        => $layout,
-                   message       => $message,
-                   error_msg     => $error_msg,
-                   type          => $type,
-                   object_action => $object_action,
-    );
+    $layout = $args{layout} || $self->stash('layout') || $layout;
+
+    if ( $self->req->is_xhr )
+    {
+        my $page =
+          $self->render_to_string(
+                                   object        => $object,
+                                   template      => $template,
+                                   helper_opts   => $helper_opts,
+                                   layout        => '',
+                                   message       => $message,
+                                   error_msg     => $error_msg,
+                                   type          => $type,
+                                   object_action => $object_action,
+          );
+
+        return $self->rend(
+            json => {
+                      page => $page,
+            }
+        );
+    }
+
+    return
+      $self->render(
+                     object        => $object,
+                     template      => $template,
+                     helper_opts   => $helper_opts,
+                     layout        => $layout,
+                     message       => $message,
+                     error_msg     => $error_msg,
+                     type          => $type,
+                     object_action => $object_action,
+      );
 
 }
 
@@ -558,11 +619,11 @@ sub search
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
     eval "use $type";
 
-    my $template = $args{template} || 'zoe/show_all';
-    my $limit    = $args{limit}    || 10;
-    my $where    = $args{where}    || {};
+    my $template = $args{template} || $self->stash('template') || 'zoe/show_all';
+    my $limit    = $args{limit}    ||  $self->stash('limit') ||  10;
+    my $where    = $args{where}    ||  $self->stash('where') || {};
     my $object   = $type->new;
-    my $helper_opts = $args{helper_opts} || {};    #options to the helper
+    my $helper_opts = $args{helper_opts} || $self->stash('helper_opts') || {};    #options to the helper
     my @args = ();
 
     if ( $args{args} )
@@ -573,9 +634,9 @@ sub search
 
     my @columns = $type->get_searchable_columns();
     my $search  = $self->param('search');
-    my $order   = $self->param('order_by');
+    my $order   = $self->param('order_by') || $self->stash('order_by');
 
-    my $offset = $self->param('offset') || 0;
+    my $offset = $self->param('offset') || $self->stash('offset')|| 0;
     my $order_by = [];
     if ($order)
     {
@@ -608,7 +669,27 @@ sub search
             $obj = \%tmp_hash;
 
         }
-        return $self->render( json => \@all, );
+        
+        my $page = $self->render_string(
+         @_,
+                         object      => $object,
+                         limit       => $limit,
+                         count       => $count,
+                         offset      => $offset,
+                         order_by    => $order,
+                         all         => \@all,
+                         search      => $search,
+                         template    => $template,
+                         helper_opts => $helper_opts,
+                         layout      => '',
+                         type        => $type,
+                         @args
+        );
+        return $self->render( json => {
+                object=>\@all,
+                success => 1, 
+                page => $page},
+        , );
     }
 
     $layout = $args{layout} || $layout;

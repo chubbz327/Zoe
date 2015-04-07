@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use ExtUtils::MakeMaker;
 WriteMakefile(
- VERSION          => '0.35',
+ VERSION          => '0.39',
  AUTHOR           => 'dinni bartholomew <dinnibartholomew@gmail.com>',
  LICENSE          => 'artistic_2',
  MIN_PERL_VERSION => '5.010001',

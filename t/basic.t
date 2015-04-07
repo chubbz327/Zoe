@@ -27,7 +27,7 @@ my $t = Test::Mojo->new('Zoe') or die 'Could not start Zoe';
 $t->app->log->level('debug');
 
 #confirm that app generation works via post to the web interface
-my $tpl = file( $cwd, 'test.yml.tpl' );
+my $tpl = file( $cwd, 'test2.yml.tpl' );
 die 'Could not read application description file ./test.yml.tpl: ' . $!
   unless ( -e $tpl );
 my $tpl_content = read_file($tpl);
@@ -45,7 +45,7 @@ my $output = Zoe->new()->generate_application(
             );
 
 
-my $generated_test = file($app_location, 'employee' , 't', '00.crud.t');
+my $generated_test = file($app_location, 'project' , 't', '00.crud.t');
 runtests( ["$generated_test"]);
   
 #unlink($file);

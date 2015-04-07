@@ -1,0 +1,1 @@
+ <li><a href="<%= url_for($page_route_name)%>"><%= $page_name %></a></li>

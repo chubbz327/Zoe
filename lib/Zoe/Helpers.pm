@@ -46,6 +46,7 @@ sub register
         get_tableheading
         get_pagination
         prettyfy
+        get_menu_for_portal
         )
       )
     {
@@ -114,6 +115,56 @@ sub _get_route_name_for_object
     return $route_name;
 }
 
+
+sub _get_menu_for_portal {
+    my $self = shift;
+    my %args = @_;
+    my $controller             = $args{controller};
+    my $portal = $controller->get_portal();
+    
+    my $menu = $portal->{menu};
+    my $menu_string ='';
+    foreach my $key (keys(%{$menu})){
+        if (ref ($menu->{$key})){ #submenu
+            $menu_string .= $self->_get_sub_menu_row(submenu => $menu->{$key}, link_name => $key, controller=>$controller);
+        }else {
+            $menu_string .= $controller->render_to_string('fragments/pagination',
+                page_name => $key, 
+                page_route_name => $menu->{$key},
+                ); 
+        }
+    } 
+    
+}
+sub _get_sub_menu_row{
+    my $self = shift;
+    my %args = @_;
+    my $menu = $args{submenu};
+    my $link_name = $args{link_name};
+    my $controller = $args{controller};
+    my $return_string = '';
+    
+    $return_string .= sprintf('<li class="dropdown">
+                    <a data-toggle="dropdown" class="dropdown-toggle" href="#">%s <b class="caret"></b></a>
+                    <ul role="menu" class="dropdown-menu">
+                    %s
+                    ', $link_name);
+    
+     foreach my $key (keys(%{$menu})){
+         if (ref ($menu->{$key})){ #submenu
+            $return_string .= $self->_get_sub_menu_row(submenu => $menu->{$key}, link_name => $key, controller => $controller);
+        }else {
+            $return_string .= $controller->render_to_string('fragments/pagination',
+                page_name => $key, 
+                page_route_name => $menu->{$key},
+                ); 
+        }
+     }
+     $return_string .='  </ul></li>';
+     
+     return $return_string;
+    
+}
 sub _get_pagination
 {
     my $self = shift;
@@ -486,7 +537,7 @@ sub _get_rows_for_dataobject
             my $value   = '';
             if ($display)
             {
-                $value = eval $display;
+                $value = eval $display || '';
             } else
             {
                 $value = $object->$method_name();
@@ -619,7 +670,7 @@ sub _get_rows_for_many
     my $td_attributes     = $args{'td_attributes'} || '';
     my $tr_attributes     = $args{'tr_attributes'} || '';
     
-    my $class= $args{class};
+    my $class= $args{class} || '';
     #$self->_set_global_values(@_);
     my $member_name  = $args{member_name};
     my $label        = $args{label} || '&nbsp;';

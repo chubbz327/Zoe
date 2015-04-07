@@ -1,3 +1,8 @@
+% my $runtime = get_runtime();
+% my $url_prefix = $runtime->{server_startup}->{url_prefix} || '__ADMIN__/';
+% $url_prefix .= '/' unless ($url_prefix =~ /\/$/);
+% my $app_name = $runtime->{server_startup}->{application_name}; 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,7 +17,7 @@
     <meta name="author" content="">
     <link rel="icon" href="../../favicon.ico">
 
-    <title></title>
+    <title> <%= $app_name %></title>
     <!-- Zoe CSS -->
     <link href="/assets/css/zoe.css" rel="stylesheet">
     
@@ -67,7 +72,7 @@
 <script src="//tinymce.cachefly.net/4.1/tinymce.min.js"></script>
 <script>tinymce.init({selector:'textarea.richtext'});</script>
 
- <title><%= title %></title> 
+
 </head>
 
 
@@ -85,14 +90,14 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="/#__URLPREFIX__">#__APPLICATIONNAME__</a>
+          <a class="navbar-brand" href="/<%= $url_prefix %>"><%= $app_name %></a>
         </div>
         <div class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
-            <li class="active"><a href="/#__URLPREFIX__">Models</a></li>
-            <li><a href="/#__URLPREFIX____RUNTIME__">Runtime</a></li>
-            <li><a href="/#__URLPREFIX____MANAGE__">Manage</a></li>
-            <li><a href="/#__URLPREFIX____DOCUMENTATION__">Docs</a></li>
+            <li class="active"><a href="/<%= $url_prefix %>">Models</a></li>
+            <li><a href="/<%= $url_prefix %>__RUNTIME__">Runtime</a></li>
+            <li><a href="/<%= $url_prefix %>__MANAGE__">Manage</a></li>
+            <li><a href="/<%= $url_prefix %>__DOCUMENTATION__">Docs</a></li>
            
           </ul>
         </div><!--/.nav-collapse -->

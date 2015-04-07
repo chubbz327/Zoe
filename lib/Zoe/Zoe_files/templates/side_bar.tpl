@@ -6,6 +6,8 @@
 %%=     include 'fragments/runtime_sidebar';
 
 
+%%} elsif ( url_for() =~ /__MANAGE__/ ) {
+
 %%} elsif ( url_for() =~ /__DOCUMENTATION__/ ) {
 
 

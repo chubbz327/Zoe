@@ -134,6 +134,12 @@ sub generate_application
         $toucher->touch($db_file);
     }
 
+    my $import_dir  = dir( $application_location, '..', 'yaml', 'import' );
+    make_path( "" . $import_dir) unless ( -d $import_dir );
+    
+    my $runtime_dir  = dir( $application_location, '..', 'yaml', 'runtime' );
+    make_path( "" . $runtime_dir) unless ( -d $runtime_dir );
+    
     $self->generate_mvc();
 
     #create runtime.yml
@@ -143,11 +149,7 @@ sub generate_application
     #make config dir under the mojo app
     make_path( "" . $dir ) unless ( -d $dir );
     
-    my $import_dir  = dir( $application_location, '..', 'yaml', 'import' );
-    make_path( "" . $import_dir) unless ( -d $import_dir );
-    
-    my $runtime_dir  = dir( $application_location, '..', 'yaml', 'runtime' );
-    make_path( "" . $runtime_dir) unless ( -d $runtime_dir );
+
     
 
     my $runtime_yml = file( $application_location, 'config', "runtime.yml" );
@@ -170,6 +172,7 @@ sub _import_files
 {
     my %import_hash;
     my $time = time();
+    return unless (@import_files);
     foreach my $file (@import_files)
     {
         my $config = YAML::XS::LoadFile($file)
@@ -200,9 +203,10 @@ sub _import_files
             $object->save( force_insert => 1 );
         }
     }
+    
     my $file_name = 'backup_' . 'all_models_' . $time . '.yaml';
     my $save_file =
-      file( $application_location, 'config', $file_name );
+      file( $application_location, '..', 'yaml', 'import', $file_name );
      local $YAML::SortKeys = 0;
     YAML::XS::DumpFile( $save_file, \%import_hash )
       or croak "could not save $file_name";
@@ -505,8 +509,8 @@ sub _copy_fragments
     }
     
     dircopy( "$from", "$to", )
-      or die "Could not copy fragments directory: $from $to\n$!"
-      unless ($to);
+      or die "Could not copy fragments directory: $from $to\n$!";
+      ##unless ($to);
 
 }
 ############################################
@@ -520,8 +524,7 @@ sub _copy_fragments
 # See Also   : n/a
 sub _write_layout
 {
-    my $layout_out =
-      file( $application_location, 'templates', 'layouts', 'zoe.html.ep' );
+    
     my $side_bar_out =
       file( $application_location, 'templates', 'sidebar.html.ep' );
     my $objects_ref = shift;
@@ -529,20 +532,12 @@ sub _write_layout
     $url_prefix = '' unless ($url_prefix);
 
     #copy layout file
-    my $layout_file = file( $ZOE_FILES, 'templates', 'default.html.ep' );
+    my $from = dir( $ZOE_FILES, 'templates', 'layouts' );
+    my $to =  dir ( $application_location, 'templates', 'layouts',);
 
-    # my $side_bar_file = file( $ZOE_FILES, 'templates', 'default.html.ep' );
-    my $LAYOUT = $layout_file->open
-      or croak "Could not open $layout_file :$!";
-    my $layout_content;
-    {
-        local $/ = undef;
-        $layout_content = <$LAYOUT>;
-    }
-    $layout_content =~ s/\#__APPLICATIONNAME__/$application_name/gmx;
-
-    $layout_content =~ s/\#__URLPREFIX__/$url_prefix/gmx;
-
+    dircopy( $from, $to )  or croak "Could not copy $from to $to :$!\n";
+    
+ 
     my $side_bar_tpl =
       read_file( file( $ZOE_FILES, 'templates', 'side_bar.tpl' ) )
       or croak "could not read side_bar.tpl ";
@@ -550,15 +545,7 @@ sub _write_layout
     my $side_bar =
       $mojolicious_template->render( $side_bar_tpl, $objects_ref, $url_prefix );
 
-#    foreach my $object ( @{$objects_ref} )
-#    {
-#        my $object_name = $object->{object};
-#        $object_name =~ s/.*\:\:(\w+)$/$1/gmx;
-#        my $route_name = $url_prefix . $object_name;
-#        $route_name = lc($route_name);
-#        $side_bar .=
-#"<li><a href='/$route_name'><i class='icon-chevron-right'></i> $object_name</a></li>";
-#    }
+ 
 
     # if paypal is enabled add the paypal links to the side_bar_file
     if ( $application_description->[0]->{paypal} )
@@ -570,20 +557,7 @@ sub _write_layout
     #$layout_content =~ s/\#__SIDEBAR__/$side_bar/gmx;
     write_file( $side_bar_out, $side_bar )
       or croak "Could not write file $side_bar_out: $!";
-    my $layout_dir = dir( $application_location, 'templates', 'layouts' );
-    make_path("$layout_dir")
-      or croak "Could not create $layout_dir"
-      unless ( -d "$layout_dir" );
-    msg( "Created $layout_dir", $is_verbose );
-    unless ( ( !-e $layout_out ) || ($do_replace_existing) )
-    {
-        debug( "$layout_out exists; specify --repace to overwrite",
-               $is_verbose );
-
-        #return;
-    }
-    write_file( $layout_out, $layout_content )
-      or croak "Could not write file $layout_out: $!";
+   
     return;
 }
 ############################################
@@ -630,8 +604,8 @@ sub generate_mojo_app
 
 
     dircopy( "" . $from_asset, "" . $to_asset )
-      or croak "could not copy $from_asset to $to_asset: $!"
-      unless (-d $to_asset);
+      or croak "could not copy $from_asset to $to_asset: $!";
+      #unless (-d $to_asset);
       
       
     msg( "Copied $from_asset\n\tto $to_asset", $is_verbose );
@@ -1259,9 +1233,9 @@ sub _set_initial_values
     }
     if ($return)
     {
-
+        
         my $file_name = 'backup_' . 'all_models_' . $time . '.yaml';
-        my $save_file = file( $application_location, 'config', $file_name );
+        my $save_file = file( $application_location, '..', 'yaml', 'import', $file_name );
          local $YAML::SortKeys = 0;
         YAML::XS::DumpFile( $save_file, $return )
           or croak "could not save $file_name";
@@ -1431,97 +1405,14 @@ sub _write_views
     my $objects_ref = shift;
 
     #set and create template directory
-    my $template_dir = dir( $application_location, "templates", 'zoe' );
-    make_path("$template_dir")
-      or croak "Could not create $template_dir: $!"
-      unless ( -e "$template_dir" );
-
-    #copyruntime
-    my $runtime_file = file( $ZOE_FILES, 'templates', 'runtime.html.ep' );
-    copy( $runtime_file, dir( $application_location, "templates", 'zoe' ) )
-      or croak "Could not copy $runtime_file";
-      
-     #manage
-     my $manage_file = file( $ZOE_FILES, 'templates', 'manage.html.ep' );
-    copy( $manage_file, dir( $application_location, "templates", 'zoe' ) )
-      or croak "Could not copy $manage_file";
-      
-
-    #copy signin
-    my $signin_file = file( $ZOE_FILES, 'templates', 'signin.html.ep' );
-    copy( $signin_file, dir( $application_location, "templates", 'zoe' ) )
-      or croak "Could not copy $signin_file";
-
-    #copy not authorized
-    my $not_authorized_file =
-      file( $ZOE_FILES, 'templates', 'not_authorized.html.ep' );
-    copy( $not_authorized_file,
-          dir( $application_location, "templates", 'zoe' ) )
-      or croak "Could not copy $not_authorized_file";
-
-    #copy example
-    my $example = file( $ZOE_FILES, 'templates', 'welcome.html.ep' );
-    copy( $example, dir( $application_location, "templates", 'zoe' ) )
-      or croak "Could not copy $example";
-
-    #show all
-    my $show_all =
-      read_file( file( $ZOE_FILES, 'templates', 'show_all_view.tpl' ) );
-
-    my $show_all_file = file( $template_dir, 'show_all.html.ep' );
-
-    if ( ( -e $show_all_file ) && ( !$do_replace_existing ) )
-    {
-        msg( "View $show_all_file exists -- specify -replace to overwrite",
-             $is_verbose );
-    } else
-    {
-        write_file( $show_all_file, $show_all )
-          or croak "Could not write file $show_all_file: $!";
-        msg( "View $show_all_file created ", $is_verbose );
-    }
-
-    #show
-    my $show = read_file( file( $ZOE_FILES, 'templates', 'show_view.tpl' ) );
-
-    my $show_file = file( $template_dir, 'show.html.ep' );
-    if ( ( -e $show_file ) && ( !$do_replace_existing ) )
-    {
-        msg( "View $show_file exists -- specify -replace to overwrite",
-             $is_verbose );
-    } else
-    {
-        write_file( $show_file, $show )
-          or croak "Could not write file $show_file: $!";
-        msg( "View $show_file created ", $is_verbose );
-    }
-
-    #create edit
-    my $create_edit =
-      read_file(
-                file( $ZOE_FILES, 'templates', 'model_create_edit_view.tpl' ) );
-
-    my $show_create_edit_file = file( $template_dir, 'create_edit.html.ep' );
-
-    if ( ( -e $show_create_edit_file ) && ( !$do_replace_existing ) )
-    {
-        msg(
-
-"View $show_create_edit_file exists -- specify -replace to overwrite",
-            $is_verbose
-        );
-    } else
-    {
-
-        write_file( $show_create_edit_file, $create_edit )
-          or croak "Could not open $show_create_edit_file: $!";
-
-        msg( "View $show_create_edit_file created ", $is_verbose );
-
-    }
+    my $from = dir( $ZOE_FILES, 'templates', 'zoe' );
+    my $to = dir( $application_location, "templates", 'zoe' );
+    
+    dircopy( $from, $to )  or croak "Could not copy $from to $to :$!\n";
     return;
 }
 
+#set the use statements for use with the shell
 sub _get_repl_eval
 {
     my $objects_ref = shift;
