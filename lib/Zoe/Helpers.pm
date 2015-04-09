@@ -54,6 +54,7 @@ sub register
         $app->helper(
             $name => sub {
                 my $controller = shift;
+                
                 Zoe::Helpers->new()
                   ->$method_name( controller => $controller, @_ );
             }
@@ -128,13 +129,13 @@ sub _get_menu_for_portal {
         if (ref ($menu->{$key})){ #submenu
             $menu_string .= $self->_get_sub_menu_row(submenu => $menu->{$key}, link_name => $key, controller=>$controller);
         }else {
-            $menu_string .= $controller->render_to_string('fragments/pagination',
+            $menu_string .= $controller->render_to_string('fragments/menu_item',
                 page_name => $key, 
                 page_route_name => $menu->{$key},
                 ); 
         }
     } 
-    
+    return $menu_string;
 }
 sub _get_sub_menu_row{
     my $self = shift;
@@ -145,16 +146,16 @@ sub _get_sub_menu_row{
     my $return_string = '';
     
     $return_string .= sprintf('<li class="dropdown">
-                    <a data-toggle="dropdown" class="dropdown-toggle" href="#">%s <b class="caret"></b></a>
+                    <a data-toggle="dropdown" class="dropdown-toggle" 
+			href="#">%s <b class="caret"></b></a>
                     <ul role="menu" class="dropdown-menu">
-                    %s
                     ', $link_name);
     
      foreach my $key (keys(%{$menu})){
          if (ref ($menu->{$key})){ #submenu
             $return_string .= $self->_get_sub_menu_row(submenu => $menu->{$key}, link_name => $key, controller => $controller);
         }else {
-            $return_string .= $controller->render_to_string('fragments/pagination',
+            $return_string .= $controller->render_to_string('fragments/menu_item',
                 page_name => $key, 
                 page_route_name => $menu->{$key},
                 ); 
@@ -177,6 +178,7 @@ sub _get_pagination
     my $controller             = $args{controller};
     my $search                 = $args{search};
     my $order_by                = $args{order_by};
+    
     
     return "" unless ( $count > $limit );
     my $return_string;
@@ -321,8 +323,8 @@ sub _get_inputs_for_dataobject
         my $method_name = 'get_' . $column_name;
         my $input_class = $self->_get_class_for_input( $object, $column_name );
         
-        print $object->{TYPE} . " $column_name $column_type\n";
-        print  Dumper $object->get_column_info();
+        #print $object->{TYPE} . " $column_name $column_type\n";
+        #print  Dumper $object->get_column_info();
         if (    ( $column_type eq 'FOREIGNKEY' )
              && ( defined( $args{resolve_relationships} ) ) )
         {
@@ -366,9 +368,10 @@ sub _get_inputs_for_dataobject
                                                       object => $object );
             unless ( $object->get_primary_key_name eq $column_name )
             {
-                my $pretty_name = $self->_prettyfy(
-                                     $object->get_display_as_for($column_name) , $prettyfy
-                                     );
+                my $pretty_name = 
+                $self->_prettyfy(
+                    $object->get_display_as_for($column_name) , $prettyfy
+                );
                 $return_string .= $controller->render_to_string(
                         'fragments/input_field',
                         pretty_name => $pretty_name,

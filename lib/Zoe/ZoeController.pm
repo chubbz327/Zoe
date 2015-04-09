@@ -379,31 +379,60 @@ sub update
     return $self->redirect_to($url);
 }
 
+sub _eval_where
+{
+    my $self = shift;
+
+    my $where = shift || {};
+
+    my $new_where = {};
+    my $__USER__ = $self->get_user_from_session();
+    foreach my $key ( keys( %{$where} ) )
+    {
+        my $value = $where->{$key};
+        #$key = eval($key) || $key;
+        $new_where->{ $key } = $value;
+        $new_where->{ $key } = eval($value) unless(ref($value));
+        
+        #$new_where->{ $key } = eval($value) ;
+       # $new_where->{ $key } = 1;
+
+    }
+    print Dumper $new_where;
+    return $new_where;
+}
+
 sub show_all
 {
     my $self        = shift;
     my %args        = @_;
-    my $render_json = $args{render_json};
+   my $render_json = $args{render_json};
 
     my $type = my $__TYPE__ =
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
     eval "use $type";
 
     my $template =
-      $args{template} || $self->stash('template') || 'zoe/show_all';
+      $self->stash('template') || $args{template} || 'zoe/show_all';
 
     my $limit =
       $args{limit} || $self->param('limit') || $self->stash('limit') || -1;
 
-    my $where       = $args{where} || $self->stash('where') || {};
-    my $object      = $type->new;
+    my $where = $args{where} || $self->stash('where') || {};
+    
+    $where  = $self->_eval_where($where);
+   
+
+   
+    
+     
+    my $object = $type->new;
     my $helper_opts = $args{helper_opts} || $self->stash('helper_opts') || {};
 
     my $order = $self->param('order_by') || $self->stash('order_by');
     my $offset = $self->param('offset') || $self->stash('offset') || 0;
-    $layout = $args{layout} || $self->stash('layout') || $layout;
-    
-    
+    $layout =  $args{layout}  || $self->stash('layout') || $layout;
+
     my $order_by = [];
     if ($order)
     {
@@ -418,7 +447,7 @@ sub show_all
     );
 
     my $search;
-    
+
     my %return = (
                    search      => $search,
                    object      => $object,
@@ -492,13 +521,13 @@ sub show
 
     eval "use $type";
 
-    my $template    = $args{template}    || $self->stash('template') || 'zoe/show';
+    my $template = $args{template} || $self->stash('template') || 'zoe/show';
     my $helper_opts = $args{helper_opts} || $self->stash('helper_opts') || {};
     $layout = $args{layout} || $self->stash('layout') || $layout;
-    my $id          = $self->param('id');
+    my $id = $self->param('id');
 
     my $object = $type->find($id);
-    
+
     my %obj_hash = %{$object};
 
     if ( $self->req->is_xhr )
@@ -561,7 +590,8 @@ sub show_create_edit
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
     eval "use $type";
 
-    my $template = $args{template} || $self->stash('template') || 'zoe/create_edit';
+    my $template =
+      $args{template} || $self->stash('template') || 'zoe/create_edit';
     my $object_action =
          $args{object_action}
       || $self->param('__OBJECTACTION__')
@@ -590,11 +620,12 @@ sub show_create_edit
                                    object_action => $object_action,
           );
 
-        return $self->rend(
-            json => {
-                      page => $page,
-            }
-        );
+        return
+          $self->rend(
+                       json => {
+                                 page => $page,
+                       }
+          );
     }
 
     return
@@ -611,6 +642,25 @@ sub show_create_edit
 
 }
 
+sub portal_search {
+    my $self =shift;
+    my %args = @_;
+    
+    my $portal = $self->get_portal();
+    
+    my %models = %{$portal->{models}};
+    my $limit = $portal->{search}->{limit};
+    my $search_results = {};
+    foreach my $model (keys(%models)) {
+        my $link_to = $models{$model};
+        $search_results->{$model}->{$link_to} = $self->search(
+            __TYPE__=> $model,
+            limit => $limit,             
+        );        
+    }
+    
+}
+
 sub search
 {
     my $self = shift;
@@ -619,11 +669,15 @@ sub search
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
     eval "use $type";
 
-    my $template = $args{template} || $self->stash('template') || 'zoe/show_all';
-    my $limit    = $args{limit}    ||  $self->stash('limit') ||  10;
-    my $where    = $args{where}    ||  $self->stash('where') || {};
-    my $object   = $type->new;
-    my $helper_opts = $args{helper_opts} || $self->stash('helper_opts') || {};    #options to the helper
+    my $template =
+      $args{template} || $self->stash('template') || 'zoe/show_all';
+    my $limit = $args{limit} || $self->stash('limit') || 10;
+    my $where = $args{where} || $self->stash('where') || {};
+    my $object = $type->new;
+    my $helper_opts =
+         $args{helper_opts}
+      || $self->stash('helper_opts')
+      || {};    #options to the helper
     my @args = ();
 
     if ( $args{args} )
@@ -636,7 +690,7 @@ sub search
     my $search  = $self->param('search');
     my $order   = $self->param('order_by') || $self->stash('order_by');
 
-    my $offset = $self->param('offset') || $self->stash('offset')|| 0;
+    my $offset = $self->param('offset') || $self->stash('offset') || 0;
     my $order_by = [];
     if ($order)
     {
@@ -658,6 +712,8 @@ sub search
                                offset  => $offset,
                                where   => $where
     );
+    
+    return @all if ($args{return_all});
 
     if ( $self->req->is_xhr() )
     {
@@ -669,27 +725,31 @@ sub search
             $obj = \%tmp_hash;
 
         }
-        
+
         my $page = $self->render_string(
-         @_,
-                         object      => $object,
-                         limit       => $limit,
-                         count       => $count,
-                         offset      => $offset,
-                         order_by    => $order,
-                         all         => \@all,
-                         search      => $search,
-                         template    => $template,
-                         helper_opts => $helper_opts,
-                         layout      => '',
-                         type        => $type,
-                         @args
+                                         @_,
+                                         object      => $object,
+                                         limit       => $limit,
+                                         count       => $count,
+                                         offset      => $offset,
+                                         order_by    => $order,
+                                         all         => \@all,
+                                         search      => $search,
+                                         template    => $template,
+                                         helper_opts => $helper_opts,
+                                         layout      => '',
+                                         type        => $type,
+                                         @args
         );
-        return $self->render( json => {
-                object=>\@all,
-                success => 1, 
-                page => $page},
-        , );
+        return
+          $self->render(
+                         json => {
+                                   object  => \@all,
+                                   success => 1,
+                                   page    => $page
+                         },
+                         ,
+          );
     }
 
     $layout = $args{layout} || $layout;

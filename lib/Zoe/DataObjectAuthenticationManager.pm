@@ -94,7 +94,12 @@ sub do_check {
         $is_verbose
     );
 
-    $controller->session( $auth_config->{user_session_key}, => $user_name );
+    $user->{DBH} = '';
+    $user->{$password_member} = '';
+    $user->{$salt_member} = '';
+    
+
+    $controller->session( $auth_config->{user_session_key}, => YAML::XS::Dump( $user ) );
 
     #set role session keys
     my $role_method = 'get_' . $role_member;

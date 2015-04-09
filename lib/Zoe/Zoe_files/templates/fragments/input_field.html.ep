@@ -14,7 +14,20 @@
         <option> ... </option>
       
         
-%==   $object->get_select_options_for($column_name);
+
+% my %select_options = %{  $object->get_select_options_for($column_name ) };
+% foreach my $value (  keys (  %select_options  ) ) {
+% my $text = $select_options{$value};
+
+% if ($object->{$column_name} eq $value) {
+    
+    
+    <option value='<%=$value%>' selected> <%=$text %> </option>
+% } else {
+    <option value='<%=$value%>' > <%=$text %> </option>
+
+%}
+% }
         </select>
         
 % } elsif ( $check_input eq 'radio' ) {

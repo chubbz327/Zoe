@@ -21,7 +21,7 @@ sub search {
 	my $template	=  'zoe/show_all';
 	my $limit		= 10;
 	
-	$self->SUPER::search(   template => $template, limit => $limit );
+	$self->SUPER::search(   template => $template, limit => $limit, layout=>'zoe' );
 	return;	     
 }
 
@@ -29,7 +29,8 @@ sub show_all {
     my $self    = shift;
 	my $template	=  'zoe/show_all';
 	my $limit		= 10;
-    $self->SUPER::show_all(  template => $template, limit => $limit );
+    $self->SUPER::show_all(  template => $template, limit => $limit, layout=>'zoe' );
+	 
 	return; 
 }
 
@@ -37,7 +38,7 @@ sub show {
     my $self    = shift;
 	my $template	= 'zoe/show';
 	
-	$self->SUPER::show(  template => $template, );
+	$self->SUPER::show(  template => $template,, layout=>'zoe' );
 	return;
 }
 
@@ -68,7 +69,7 @@ sub show_edit {
        
     my $template= $args{template} || 'zoe/create_edit';
     $self->SUPER::show_create_edit(  template => $template, 
-    		object_action => '_update');
+    		object_action => '_update',  layout=>'zoe');
     return;
 }
 sub show_create {
@@ -77,7 +78,7 @@ sub show_create {
        
     my $template= $args{template} ||  'zoe/create_edit';
 	$self->SUPER::show_create_edit(  template => $template, 
-	object_action => '_create');
+	object_action => '_create',  layout=>'zoe');
     return;
 }
 

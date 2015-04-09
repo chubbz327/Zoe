@@ -62,9 +62,16 @@ models:
         foreign_key: Namespace::User
         member: User
 
-
+     -  name: completion_date
+        type: text
+        input_type: date
+        constraints: 
 
   - object: Namespace::User
+    has_many:
+     -  object: Namespace::Task
+        key: User_ID
+        member: Tasks     
     many_to_many:
      -  object: Namespace::Project
         table: ProjectXEmployee
@@ -113,7 +120,15 @@ models:
        password_salt: nelsonmandella1288
        Role_ID: 1 
 
-
+     - login: user1
+       password_hash: 05aaab2856408bcc06db2fe28ac184db30fcbdfc
+       password_salt: nelsonmandella1288
+       Role_ID: 3 
+       
+     - login: user2
+       password_hash: 05aaab2856408bcc06db2fe28ac184db30fcbdfc
+       password_salt: nelsonmandella1288
+       Role_ID: 4        
 
   - object: Namespace::Role
     has_many:
@@ -149,9 +164,6 @@ authorization:
   logout_path: /logout
   logout_controller: Zoe::AuthenticationController
   logout_do_method: logout
-
-
-
   user_session_key: user_id
   role_session_key: role
 
@@ -180,15 +192,68 @@ authorization:
       role_object: Namespace::Role
       admin_role: admin   
       role_column: Role_ID
+
+
       
+portals: 
+  - name: 'Task Viewer'
+    url_prefix: __FRONTEND__/
+    layout:    top_menu_layout
+    models: 
+      'Namespace::Task': __show_task__
+    search:
+      limit: 5
       
+       
+       
+    menu: 
+      Home: __home_page__
+      View:
+        complete: __complete__
+        pending: __pending__
+    pages:
+      - name: home  
+        route_name: __home_page__
+        controller: Zoe::ZoeController
+        action: show_all
+        path: ''
+        method: get #get is default
+        stash: 
+          __TYPE__: Namespace::Task
+          template_name: 'zoe/show_all'
+          where: 
+            USER_ID: '$self->get_user_from_session()->{ID}'
 
 
 
 
-
-
-
+      - name: complete  
+        route_name: __complete__
+        controller: Zoe::ZoeController
+        action: show_all
+        path: complete
+        method: get #get is default
+        stash: 
+          __TYPE__: Namespace::Task
+          template_name: 'zoe/show_all'
+          where: 
+            USER_ID: '$self->get_user_from_session()->{ID}'
+            completion_date: 
+              '!=': undef
+                
+      - name: pending  
+        route_name: __pending__
+        controller: Zoe::ZoeController
+        action: show_all
+        path: pending
+        method: get #get is default
+        stash: 
+          __TYPE__: Namespace::Task
+          template_name: 'zoe/show_all'
+          where: 
+            USER_ID: '$self->get_user_from_session()->{ID}'
+            completion_date: undef
+          
 
      
  

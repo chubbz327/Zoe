@@ -32,9 +32,12 @@ sub do_check
     my $controller          = shift;
     my $request_http_method = $controller->req->method;
 
-    my $user =
+    my $user_yaml =
       ( $controller->session( $auth_config->{user_session_key} ) || 0 );
     #return 0 unless( $user );
+    
+    my $user = 0;
+    $user = YAML::XS::Load($user_yaml) || {};
     
       
     my $roles_dump =  ( $controller->session( $auth_config->{role_session_key} ) || 0 );
@@ -65,6 +68,7 @@ sub do_check
     my $success = 0;
     foreach my $role ( @{$roles} )
     {
+	#debug (Dumper $role, 1);
         for ( my $i = 0 ; $i < scalar(@routes) ; $i++ )
         {
             my $route  = $routes[$i];

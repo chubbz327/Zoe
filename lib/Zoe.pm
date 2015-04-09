@@ -971,10 +971,10 @@ sub generate_mvc
                     {
                         my $select_content = $select_options{$select_value};
                         $options_string .=
-"<option value='$select_value'> $select_content </option>\n";
+"'$select_value' => '$select_content', \n";
                     }
                     $select_options_string .=
-                      "'$column->{name}', q^$options_string^,\n";
+                      "'$column->{name}' => {$options_string},\n";
                 }
             }
             if ( defined( $column->{display} ) )
