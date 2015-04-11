@@ -98,8 +98,11 @@ sub do_check {
     $user->{$password_member} = '';
     $user->{$salt_member} = '';
     
+    $user->{TO_STRING} = $user->to_string();
 
     $controller->session( $auth_config->{user_session_key}, => YAML::XS::Dump( $user ) );
+    
+    $controller->session( '__USER__', => YAML::XS::Dump( $user ) );
 
     #set role session keys
     my $role_method = 'get_' . $role_member;
@@ -118,6 +121,9 @@ sub do_check {
  
    
     $controller->session( $auth_config->{role_session_key},  YAML::XS::Dump( $roles ) ); 
+    
+    $controller->session( '__ROLE__',  YAML::XS::Dump( $roles ) ); 
+    
     return 1;   
 
 }

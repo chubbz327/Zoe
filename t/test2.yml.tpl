@@ -45,10 +45,19 @@ models:
      -  name: ID
         type: integer
         primary_key: 1
-     -  name: name
+        
+     -  name: title
         type: text
         constraints: "not null"
         to_string: 1  
+
+     -  name: description
+        type: text
+        input_type: textarea
+        constraints: "not null"
+
+
+
 
      -  name: Project_ID
         type: integer
@@ -152,7 +161,7 @@ models:
      - name: users
      
 authorization:
-  login_path: /__ADMIN__/login
+  login_path:  login
   login_controller: Zoe::AuthenticationController
   login_show_method: show_login
   login_do_method: do_login
@@ -160,10 +169,10 @@ authorization:
   login_user_param: user
   login_password_param: password
   default_index: /__ADMIN__
-
-  logout_path: /logout
+  logout_path: logout
   logout_controller: Zoe::AuthenticationController
   logout_do_method: logout
+  
   user_session_key: user_id
   role_session_key: role
 
@@ -177,6 +186,14 @@ authorization:
          http_method: any
          match_roles:
            - name: admin
+           
+      -  path: /__FRONTEND__.*
+         method: match_role
+         http_method: any
+         match_roles:
+           - name: admin           
+           - name: user
+           - name: manager                           
       -  path: .*
          method: match_role
          http_method: any
@@ -193,19 +210,25 @@ authorization:
       admin_role: admin   
       role_column: Role_ID
 
-
-      
 portals: 
   - name: 'Task Viewer'
-    url_prefix: __FRONTEND__/
+    url_prefix: /__FRONTEND__/
     layout:    top_menu_layout
     models: 
       'Namespace::Task': __show_task__
-    search:
+    search:  
+      path: search_task_viewer
+      template: 'zoe/portal_model_list'
       limit: 5
-      
-       
-       
+      route_name: __search_task_viewer__
+      hidden_inputs: 
+        __TYPE__: Namespace::Task       #if __TYPE__ is set, then search will be performed on all objects specified 
+                                        # in models attribute      
+            #optional params
+      controller:                       #default Zoe::ZoeController
+      action:                           #default portal_search
+      method:                           #default post     
+      form_attributes:                  #attributes 
     menu: 
       Home: __home_page__
       View:
@@ -220,12 +243,18 @@ portals:
         method: get #get is default
         stash: 
           __TYPE__: Namespace::Task
-          template_name: 'zoe/show_all'
+          template: 'zoe/portal_model_list'
+          helper_opts:
+            no_link_foreign_key:
+              - Project_ID          
+            route_name: __show_task__
+            order:
+              - ID
+              - title
+              - completion_date 
+              - Project_ID          
           where: 
             USER_ID: '$self->get_user_from_session()->{ID}'
-
-
-
 
       - name: complete  
         route_name: __complete__
@@ -235,7 +264,16 @@ portals:
         method: get #get is default
         stash: 
           __TYPE__: Namespace::Task
-          template_name: 'zoe/show_all'
+          template: 'zoe/portal_model_list'
+          helper_opts:
+            no_link_foreign_key:
+              - Project_ID          
+            route_name: __show_task__
+            order:
+              - ID
+              - title
+              - completion_date 
+              - Project_ID
           where: 
             USER_ID: '$self->get_user_from_session()->{ID}'
             completion_date: 
@@ -249,11 +287,77 @@ portals:
         method: get #get is default
         stash: 
           __TYPE__: Namespace::Task
-          template_name: 'zoe/show_all'
+          template: 'zoe/portal_model_list'
           where: 
             USER_ID: '$self->get_user_from_session()->{ID}'
             completion_date: undef
           
+          helper_opts:
+            no_link_foreign_key:
+              - Project_ID          
+            route_name: __edit_task__
+            order:
+              - ID
+              - title
+              - completion_date 
+              - Project_ID          
+
+
+
+      - name: show_task  
+        route_name: __show_task__
+        controller: Zoe::ZoeController
+        action: show
+        path: show_task/:id
+        method: get #get is default
+        stash: 
+          __TYPE__: Namespace::Task
+          template: 'zoe/portal_show'
+
+          helper_opts:
+            no_edit: 1
+            no_link_foreign_key:
+              - Project_ID
+            order:
+              - ID
+              - title
+              - completion_date 
+              - Project_ID
+              - description
+
+
+      - name: edit_task  
+        route_name: __edit_task__
+        controller: Zoe::ZoeController
+        action: show_edit
+        path: edit_task/:id
+        method: get #get is default
+        stash: 
+          __TYPE__: Namespace::Task
+          template: 'zoe/portal_create_edit'
+          helper_opts:
+            no_edit: 1
+            set_as_disabled:
+              - ID
+              - title
+              - User_ID
+              - Project_ID
+              - description
+
+
 
      
- 
+    authentication:
+        login_path:                             # defaults to url_prefix . login 
+        login_controller:                       # default Zoe::AuthenticationController
+        login_show_method:                      # default show_login
+        login_do_method:                        # do_login
+        login_template: 'zoe/portal_login'                         # zoe/portal_login
+        login_user_param:                       # user
+        login_password_param:                   # password
+        default_index:                          # $url_pefix
+        logout_path:                            # $url_pefix . logout
+        logout_controller:                      # Zoe::AuthenticationController
+        logout_do_method:                       # logout  
+       
+          

@@ -14,16 +14,16 @@
             </a>
         </th>
     
-
+% my $type = $object->{TYPE};
 %    foreach my $column_name (@$column_names) {
 %        next if any { $column_name eq $_ } @$ignore;
 %        next if ( $object->get_primary_key_name eq $column_name );
 
 %#       ascending order
-%        my $url_asc = $controller->url_with->query( [ order_by => $column_name ] );
+%        my $url_asc = $controller->url_with->query( [ order_by => $column_name, __TYPE__=> $type ] );
 
 %#       descending order_by
-%        my $url_desc = $controller->url_with->query( [ order_by => "-" . $column_name ] );
+%        my $url_desc = $controller->url_with->query( [ order_by => "-" . $column_name , __TYPE__=> $type ] );
         
 %#      if foreign key get the member name else use the column name
 

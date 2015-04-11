@@ -1,0 +1,25 @@
+
+% layout $layout;
+    <div class="container">
+
+      <form class="form-signin" method='POST' action='<%= url_for()%>'>
+     
+        <h2 class="form-signin-heading">Please sign in</h2>
+       <div id='message'>
+       
+       %= $message
+       </div> 
+       <div>
+        <input name='user' type="text" class="input-block-level" placeholder="user" required form-control>
+        </div>
+        <p>
+        <div>
+        <input name='password' type="password" class="input-block-level" placeholder="Password" required form-control>
+        
+        </div>
+        <input type='hidden' name='requested_url' value='<%=$requested_url%>'>
+        <input type='hidden' name='auth_page' value='<%= url_for()%>'>
+        <button class="btn btn-large btn-primary" type="submit">Sign in</button>
+      </form>
+
+

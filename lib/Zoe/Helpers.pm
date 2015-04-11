@@ -6,6 +6,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Lingua::EN::Inflect qw ( PL );
 use List::MoreUtils qw{any};
 use Mojo::Util qw (xml_escape);
+
 #use vars qw (
 #  %args
 #  $controller
@@ -37,24 +38,24 @@ sub register
 {
     my ( $self, $app ) = @_;
     foreach my $name (
-        qw( 	get_rows_for_dataobject_list
-        get_rows_for_dataobject
-        get_form_for_dataobject
-        get_inputs_for_dataobject
-        get_rows_for_many
-        get_options_for_many
-        get_tableheading
-        get_pagination
-        prettyfy
-        get_menu_for_portal
-        )
+                       qw( 	get_rows_for_dataobject_list
+                       get_rows_for_dataobject
+                       get_form_for_dataobject
+                       get_inputs_for_dataobject
+                       get_rows_for_many
+                       get_options_for_many
+                       get_tableheading
+                       get_pagination
+                       prettyfy
+                       get_menu_for_portal
+                       )
       )
     {
         my $method_name = '_' . $name;
         $app->helper(
             $name => sub {
                 my $controller = shift;
-                
+
                 Zoe::Helpers->new()
                   ->$method_name( controller => $controller, @_ );
             }
@@ -64,8 +65,8 @@ sub register
 
 sub _prettyfy
 {
-    my $self   = shift;
-    my $string = shift;
+    my $self     = shift;
+    my $string   = shift;
     my $prettyfy = shift;
     return xml_escape($string) unless $prettyfy;
     $string =~ s/_/ /g;
@@ -116,196 +117,221 @@ sub _get_route_name_for_object
     return $route_name;
 }
 
+sub _get_menu_for_portal
+{
+    my $self       = shift;
+    my %args       = @_;
+    my $controller = $args{controller};
+    my $portal     = $controller->get_portal();
 
-sub _get_menu_for_portal {
-    my $self = shift;
-    my %args = @_;
-    my $controller             = $args{controller};
-    my $portal = $controller->get_portal();
-    
-    my $menu = $portal->{menu};
-    my $menu_string ='';
-    foreach my $key (keys(%{$menu})){
-        if (ref ($menu->{$key})){ #submenu
-            $menu_string .= $self->_get_sub_menu_row(submenu => $menu->{$key}, link_name => $key, controller=>$controller);
-        }else {
-            $menu_string .= $controller->render_to_string('fragments/menu_item',
-                page_name => $key, 
-                page_route_name => $menu->{$key},
-                ); 
+    my $menu        = $portal->{menu};
+    my $menu_string = '';
+    foreach my $key ( keys( %{$menu} ) )
+    {
+        if ( ref( $menu->{$key} ) )
+        {    #submenu
+            $menu_string .=
+              $self->_get_sub_menu_row(
+                                        submenu    => $menu->{$key},
+                                        link_name  => $key,
+                                        controller => $controller
+              );
+        } else
+        {
+            $menu_string .=
+              $controller->render_to_string(
+                                             'fragments/menu_item',
+                                             page_name       => $key,
+                                             page_route_name => $menu->{$key},
+              );
         }
-    } 
+    }
     return $menu_string;
 }
-sub _get_sub_menu_row{
-    my $self = shift;
-    my %args = @_;
-    my $menu = $args{submenu};
-    my $link_name = $args{link_name};
-    my $controller = $args{controller};
+
+sub _get_sub_menu_row
+{
+    my $self          = shift;
+    my %args          = @_;
+    my $menu          = $args{submenu};
+    my $link_name     = $args{link_name};
+    my $controller    = $args{controller};
     my $return_string = '';
-    
-    $return_string .= sprintf('<li class="dropdown">
+
+    $return_string .= sprintf(
+        '<li class="dropdown">
                     <a data-toggle="dropdown" class="dropdown-toggle" 
 			href="#">%s <b class="caret"></b></a>
                     <ul role="menu" class="dropdown-menu">
-                    ', $link_name);
-    
-     foreach my $key (keys(%{$menu})){
-         if (ref ($menu->{$key})){ #submenu
-            $return_string .= $self->_get_sub_menu_row(submenu => $menu->{$key}, link_name => $key, controller => $controller);
-        }else {
-            $return_string .= $controller->render_to_string('fragments/menu_item',
-                page_name => $key, 
-                page_route_name => $menu->{$key},
-                ); 
+                    ', $link_name
+    );
+
+    foreach my $key ( keys( %{$menu} ) )
+    {
+        if ( ref( $menu->{$key} ) )
+        {    #submenu
+            $return_string .=
+              $self->_get_sub_menu_row(
+                                        submenu    => $menu->{$key},
+                                        link_name  => $key,
+                                        controller => $controller
+              );
+        } else
+        {
+            $return_string .=
+              $controller->render_to_string(
+                                             'fragments/menu_item',
+                                             page_name       => $key,
+                                             page_route_name => $menu->{$key},
+              );
         }
-     }
-     $return_string .='  </ul></li>';
-     
-     return $return_string;
-    
+    }
+    $return_string .= '  </ul></li>';
+
+    return $return_string;
+
 }
+
 sub _get_pagination
 {
     my $self = shift;
+
     #$self->_set_global_values(@_);
-   
-    my %args                   = @_;
-    my $limit             = $args{limit} || 0;
-    my $offset            = $args{offset} || 0;
-    my $count             = $args{count} || 0;
-    my $controller             = $args{controller};
-    my $search                 = $args{search};
-    my $order_by                = $args{order_by};
-    
-    
+
+    my %args       = @_;
+    my $limit      = $args{limit} || 0;
+    my $offset     = $args{offset} || 0;
+    my $count      = $args{count} || 0;
+    my $controller = $args{controller};
+    my $search     = $args{search};
+    my $order_by   = $args{order_by};
+    print "COUNT $count $limit\n";
+
     return "" unless ( $count > $limit );
+
     my $return_string;
-#    my $return_string = q^ <div class="pagination"> <ul>^;
-    my $next          = $offset;
+
+    #    my $return_string = q^ <div class="pagination"> <ul>^;
+    my $next = $offset;
     $next = ( $offset + $limit ) if ( ( $offset + $limit ) < $count );
     my $prev = 0;
     if ( $offset - $limit > 0 )
     {
         $prev = $offset - $limit;
     }
-    my $prev_url = $controller->url_with->query(
-                                                 [
-                                                   order_by => $order_by,
-                                                   offset   => $prev,
-                                                   limit    => $limit,
-                                                   search   => $search
-                                                 ]
-    );
-    my $next_url = $controller->url_with->query(
-                                                 [
-                                                   order_by => $order_by,
-                                                   offset   => $next,
-                                                   limit    => $limit,
-                                                   search   => $search
-                                                 ]
-    );
-    
- 
-     $return_string = 
-            $controller->render_to_string('fragments/pagination',
-                controller=>$controller, 
-                count=>$count,
-                next_url=>$next_url,
-                prev_url => $prev_url,
-                ); 
+    my $prev_url =
+      $controller->url_with->query(
+                                    [
+                                      order_by => $order_by,
+                                      offset   => $prev,
+                                      limit    => $limit,
+                                      search   => $search
+                                    ]
+      );
+    my $next_url =
+      $controller->url_with->query(
+                                    [
+                                      order_by => $order_by,
+                                      offset   => $next,
+                                      limit    => $limit,
+                                      search   => $search
+                                    ]
+      );
+
+    $return_string =
+      $controller->render_to_string(
+                                     'fragments/pagination',
+                                     controller => $controller,
+                                     count      => $count,
+                                     next_url   => $next_url,
+                                     prev_url   => $prev_url,
+      );
     return $return_string;
 }
 
 sub _get_tableheading
 {
-    my $self = shift;
-    my %args                   = @_;
-    my $object                 = $args{object};
-    my %column_info       = $object->get_column_info();  
-    my $controller             = $args{controller};
-    
-    my $td_attributes     = $args{'td_attributes'} || '';
-    my $tr_attributes     = $args{'tr_attributes'} || '';
-    my $th_attributes     = $args{'th_attributes'} || '';	
+    my $self        = shift;
+    my %args        = @_;
+    my $object      = $args{object};
+    my %column_info = $object->get_column_info();
+    my $controller  = $args{controller};
 
-    
-    
+    my $td_attributes = $args{'td_attributes'} || '';
+    my $tr_attributes = $args{'tr_attributes'} || '';
+    my $th_attributes = $args{'th_attributes'} || '';
+
     my @column_names;
-    my @order             = ();
-    my @ignore            = ();
-    @order             = @{ $args{'order'} } if ( defined( $args{'order'} ) );
-    @ignore            = @{ $args{'ignore'} } if ( defined( $args{'ignore'} ) );
-    
-    
-    
-    
+    my @order  = ();
+    my @ignore = ();
+    @order  = @{ $args{'order'} }  if ( defined( $args{'order'} ) );
+    @ignore = @{ $args{'ignore'} } if ( defined( $args{'ignore'} ) );
+
     if (@order)
     {
         @column_names = @order;
     } else
     {
         @column_names = $object->get_column_names();
-    }  
+    }
 
-    
-    my $return_string = 
-            $controller->render_to_string('fragments/table_heading',
-                object => $object,
-                th_attributes => $th_attributes,
-                tr_attributes => $tr_attributes,
-                td_attributes => $td_attributes,
-                column_names => \@column_names,
-                controller => $controller, 
-                ignore  => \@ignore,
-                self => $self,
-            );   
-            
-    
+    my $return_string =
+      $controller->render_to_string(
+                                     'fragments/table_heading',
+                                     object        => $object,
+                                     th_attributes => $th_attributes,
+                                     tr_attributes => $tr_attributes,
+                                     td_attributes => $td_attributes,
+                                     column_names  => \@column_names,
+                                     controller    => $controller,
+                                     ignore        => \@ignore,
+                                     self          => $self,
+      );
+
     return $return_string;
 }
 
 sub _get_inputs_for_dataobject
 {
     my $self = shift;
- 
-    my %args                   = @_;
-    my $object                 = $args{object};
-    my %column_info       = $object->get_column_info();  
-    my $controller             = $args{controller};
- 
+
+    my %args        = @_;
+    my $object      = $args{object};
+    my %column_info = $object->get_column_info();
+    my $controller  = $args{controller};
+    my @set_as_disabled;
+    @set_as_disabled = @{ $args{set_as_disabled} }
+      if ( $args{set_as_disabled} );
+
     my $primary_key_value = $object->get_primary_key_value() || '';
-    my $primary_key_name  = $object->get_primary_key_name();
-    
-    
-    my $prefix                 = $args{prefix} || '';
-    my $prettyfy               = $args{prettyfy} || 0;
-    
-    
-    my @order             = ();
-    my @ignore            = ();
-    @order             = @{ $args{'order'} } if ( defined( $args{'order'} ) );
-    @ignore            = @{ $args{'ignore'} } if ( defined( $args{'ignore'} ) );
-    
+    my $primary_key_name = $object->get_primary_key_name();
+
+    my $prefix   = $args{prefix}   || '';
+    my $prettyfy = $args{prettyfy} || 0;
+
+    my @order  = ();
+    my @ignore = ();
+    @order  = @{ $args{'order'} }  if ( defined( $args{'order'} ) );
+    @ignore = @{ $args{'ignore'} } if ( defined( $args{'ignore'} ) );
+
     my @excluded_relationships = ();
     @excluded_relationships = @{ $args{exclude} }
       if ( defined( $args{exclude} ) );
-    
-    my %linked_create =%{$object->get_linked_create()};
+
+    my %linked_create = %{ $object->get_linked_create() };
 
     #set the primary key as a hidden input
-    my $return_string = 
-            $controller->render_to_string('fragments/input_primary_key', 
-                primary_key_name => $primary_key_name,
-                prefix          => $prefix,
-                primary_key_value => $primary_key_value,
-                );
-                
-       # "<input type='hidden'  id='$prefix$primary_key_name' name='$prefix$primary_key_name' 
-       # value='$primary_key_value' />\n";
-      
-     
+    my $return_string =
+      $controller->render_to_string(
+                                     'fragments/input_primary_key',
+                                     primary_key_name  => $primary_key_name,
+                                     prefix            => $prefix,
+                                     primary_key_value => $primary_key_value,
+      );
+
+# "<input type='hidden'  id='$prefix$primary_key_name' name='$prefix$primary_key_name'
+# value='$primary_key_value' />\n";
+
     my @column_names;
     if (@order)
     {
@@ -316,13 +342,15 @@ sub _get_inputs_for_dataobject
     }
     foreach my $column_name (@column_names)
     {
-        
+
         # skip column names that are in @ignore array
         next if any { $column_name eq $_ } @ignore;
         my $column_type = $column_info{$column_name};
         my $method_name = 'get_' . $column_name;
         my $input_class = $self->_get_class_for_input( $object, $column_name );
-        
+        my $disabled    = '';
+        $disabled = 'disabled' if any { $_ eq $column_name } (@set_as_disabled);
+
         #print $object->{TYPE} . " $column_name $column_type\n";
         #print  Dumper $object->get_column_info();
         if (    ( $column_type eq 'FOREIGNKEY' )
@@ -340,54 +368,68 @@ sub _get_inputs_for_dataobject
             my @fk_objects = $fk_type->find_all();
             $return_string .= $controller->render_to_string(
                 'fragments/input_foreign_key_select',
-                column_name => $column_name,
-                fk_member => $fk_member,
-                prefix => $prefix,
-                input_class    => $input_class,
+                column_name      => $column_name,
+                fk_member        => $fk_member,
+                prefix           => $prefix,
+                input_class      => $input_class,
                 primary_key_name => $primary_key_name,
-                fk_objects => \@fk_objects,
-                fk_pkey => $fk_pkey,
-                
-                );  
-             if ( defined($linked_create{$fk_member})) {
-                $return_string .= $controller->render_to_string(
-                'fragments/linked_create',
-                linked_object => $fk_type->new(),
-                member_name => $fk_member,
-                column_name => $column_name,
-                );
-             }  
+                fk_objects       => \@fk_objects,
+                fk_pkey          => $fk_pkey,
+                disabled         => $disabled,
+
+            );
+            if ( defined( $linked_create{$fk_member} ) )
+            {
+                $return_string .=
+                  $controller->render_to_string(
+                                               'fragments/linked_create',
+                                               linked_object => $fk_type->new(),
+                                               member_name   => $fk_member,
+                                               column_name   => $column_name,
+                  );
+            }
         } else
         {
             #print columns unless primary key; already done
-            my $input_type = $self->_get_type_for_input( column => $column_name,
-                                                         object => $object
-            );
+            my $input_type =
+              $self->_get_type_for_input( column => $column_name,
+                                          object => $object );
             my $value = $object->$method_name() || "";
-            my $check_input = $self->_get_input_type( column => $column_name,
-                                                      object => $object );
+            my $check_input =
+              $self->_get_input_type( column => $column_name,
+                                      object => $object );
             unless ( $object->get_primary_key_name eq $column_name )
             {
-                my $pretty_name = 
-                $self->_prettyfy(
-                    $object->get_display_as_for($column_name) , $prettyfy
-                );
-                $return_string .= $controller->render_to_string(
-                        'fragments/input_field',
-                        pretty_name => $pretty_name,
-                        column_name => $column_name,
-                        input_class => $input_class,
-                        prefix => $prefix,
-                        value => $value,
-                        check_input => $check_input,
-                        object => $object,
-                        method_name => $method_name,
-                        input_type => $input_type
-                        );                     
-            }                        
-        }   
-                
-    }      
+                my $pretty_name =
+                  $self->_prettyfy( $object->get_display_as_for($column_name),
+                                    $prettyfy );
+                $return_string .=
+                  $controller->render_to_string(
+                                                 'fragments/input_field',
+                                                 pretty_name => $pretty_name,
+                                                 column_name => $column_name,
+                                                 input_class => $input_class,
+                                                 prefix      => $prefix,
+                                                 value       => $value,
+                                                 check_input => $check_input,
+                                                 object      => $object,
+                                                 method_name => $method_name,
+                                                 input_type  => $input_type,
+                                                 disabled    => $disabled,
+                  );
+            }
+        }
+
+    }
+
+    #create hidden inputs for disabled fields
+
+    foreach my $column_name (@set_as_disabled)
+    {
+        my $column_value = $object->{$column_name};
+        $return_string .=
+"<input type='hidden' name='$column_name' value='$column_value'/> <br>";
+    }
     return $return_string;
 }
 
@@ -411,7 +453,7 @@ sub _get_type_for_input
     my $column_type = $column_info{$column};
     if ( $column_type =~ /^text$|^integer/mx )
     {
-        return 'text' ;
+        return 'text';
     } else
     {
         return $column_type;
@@ -443,32 +485,32 @@ sub _get_class_for_input
 sub _get_rows_for_dataobject
 {
     my $self = shift;
-    
-  
- 
-    my %args                   = @_;
-    my $object                 = $args{object};
-    my $controller             = $args{controller};
-    
-    my $td_attributes     = $args{'td_attributes'} || '';
-    my $tr_attributes     = $args{'tr_attributes'} || '';
-    
-    
-    my $hide_id_link      = $args{hide_id_link};
-    
+
+    my %args       = @_;
+    my $object     = $args{object};
+    my $controller = $args{controller};
+
+    my $td_attributes = $args{'td_attributes'} || '';
+    my $tr_attributes = $args{'tr_attributes'} || '';
+
+    my $hide_id_link = $args{hide_id_link};
+    my $no_edit      = $args{no_edit};
+
     my $primary_key_value = $object->get_primary_key_value() || '';
-    my $primary_key_name  = $object->get_primary_key_name();
-    
-    
+    my $primary_key_name = $object->get_primary_key_name();
+
     my %column_info = $object->get_column_info();
-    my @order             = ();
-    my @ignore            = ();
-    @order             = @{ $args{'order'} } if ( defined( $args{'order'} ) );
-    @ignore            = @{ $args{'ignore'} } if ( defined( $args{'ignore'} ) );
-    
-    my $prefix                 = $args{prefix} || '';
-    my $prettyfy                 = $args{prettyfy} || '';
-    
+    my @order       = ();
+    my @ignore      = ();
+    @order  = @{ $args{'order'} }  if ( defined( $args{'order'} ) );
+    @ignore = @{ $args{'ignore'} } if ( defined( $args{'ignore'} ) );
+    my @no_link_foreign_key = ();
+    @no_link_foreign_key = @{ $args{no_link_foreign_key} }
+      if ( $args{no_link_foreign_key} );
+
+    my $prefix   = $args{prefix}   || '';
+    my $prettyfy = $args{prettyfy} || '';
+
     #$self->_set_global_values(@_);
 
     #get the name for  the named route
@@ -479,7 +521,13 @@ sub _get_rows_for_dataobject
     ##
     # if hide_id_link is set do not show the id field in the view only
     # the action taken
-    if ($hide_id_link)
+    if ($no_edit)
+    {
+        $return_string = "
+            <tr $tr_attributes  > <td $td_attributes >$primary_key_name </td> <td $td_attributes >  
+                $primary_key_value  </td> </tr>";
+
+    } elsif ($hide_id_link)
     {
         $return_string = "
 			<tr $tr_attributes > <td $td_attributes >\&nbsp; </td> <td $td_attributes > <a href='$show_link'>
@@ -508,28 +556,43 @@ sub _get_rows_for_dataobject
         {
 
             #my $fk_type	= $object->get_foreign_key_type();
+            my $fk_member =  $object->get_member_for_column($column_name);
             my $fk_method =
-              "get_" . $object->get_member_for_column($column_name);
-            my $fk_object = $object->$fk_method();
-            my $fk_value  = '';
+              "get_" . $fk_member;
+           
+            my $fk_object   = $object->$fk_method();
+            my $fk_value    = '';
             if ($fk_object)
             {
                 $fk_value = $fk_object->to_string() || '';
             }
             if ($fk_object)
             {
+                
+                print "FK MEMEBER $fk_member $fk_method \n\n" . $object->get_member_for_column($column_name);
                 my $route_name =
                   $self->_get_route_name_for_object( $fk_object, "_show" );
                 my $url = $controller->url_for( $route_name,
                                       id => $fk_object->get_primary_key_value );
-                $return_string .=
-"<tr $tr_attributes > <td $td_attributes >$column_name</td> <td $td_attributes > <a href='$url'>$fk_value </a> </td> </tr>";
+
+                # for portals...if yoo do not want to link to foreign key
+
+                if ( any { $_ eq $column_name } @no_link_foreign_key )
+                {
+                    $return_string .=
+"<tr $tr_attributes > <td $td_attributes >$fk_member</td> <td $td_attributes > $fk_value </td> </tr>";
+                } else
+                {
+                    $return_string .=
+"<tr $tr_attributes > <td $td_attributes >$fk_member</td> <td $td_attributes > <a href='$url'>$fk_value </a> </td> </tr>";
+
+                }
+
             } else
             {
-                $return_string .=
-                  "<tr $tr_attributes > <td $td_attributes >"
-                  . $self->_prettyfy(
-                                     $object->get_display_as_for($column_name) , $prettyfy)
+                $return_string .= "<tr $tr_attributes > <td $td_attributes >"
+                  . $self->_prettyfy( $object->get_display_as_for($column_name),
+                                      $prettyfy )
                   . "</td> <td $td_attributes > \&nbsp; </td> </tr>";
             }
         } else
@@ -560,27 +623,32 @@ sub _get_rows_for_dataobject
 sub _get_rows_for_dataobject_list
 {
     my $self = shift;
+
     #$self->_set_global_values(@_);
-    
-    my %args                   = @_;
-    my $object                 = $args{object};
-    my $controller             = $args{controller};
-    
-    my $td_attributes     = $args{'td_attributes'} || '';
-    my $tr_attributes     = $args{'tr_attributes'} || '';
-    
-    my $hide_id_link      = $args{hide_id_link};
-    
+
+    my %args       = @_;
+    my $object     = $args{object};
+    my $controller = $args{controller};
+
+    my $td_attributes = $args{'td_attributes'} || '';
+    my $tr_attributes = $args{'tr_attributes'} || '';
+
+    my $hide_id_link = $args{hide_id_link};
+
     my $primary_key_value = $object->get_primary_key_value() || '';
-    my $class                  = $args{class} || "";
-    
+    my $class = $args{class} || "";
+
     my %column_info = $object->get_column_info();
-    my @order             = ();
-    my @ignore            = ();
-    @order             = @{ $args{'order'} } if ( defined( $args{'order'} ) );
-    @ignore            = @{ $args{'ignore'} } if ( defined( $args{'ignore'} ) );
-    
-    my $xml_escape             = $args{xml_escape} || 0;
+    my @order       = ();
+    my @ignore      = ();
+    @order  = @{ $args{'order'} }  if ( defined( $args{'order'} ) );
+    @ignore = @{ $args{'ignore'} } if ( defined( $args{'ignore'} ) );
+
+    my @no_link_foreign_key = ();
+    @no_link_foreign_key = @{ $args{no_link_foreign_key} }
+      if ( $args{no_link_foreign_key} );
+
+    my $xml_escape = $args{xml_escape} || 0;
 
     #return string
     my $return_string =
@@ -589,7 +657,8 @@ sub _get_rows_for_dataobject_list
     #set the primary key as the first column
     #
     #get the name for  the named route
-    my $route_name = $self->_get_route_name_for_object( $object, '_show' );
+    my $route_name = $args{route_name}
+      || $self->_get_route_name_for_object( $object, '_show' );
     my $show_link =
       $controller->url_for( $route_name, id => $object->get_primary_key_value );
 
@@ -633,8 +702,19 @@ sub _get_rows_for_dataobject_list
                   $self->_get_route_name_for_object( $fk_object, "_show" );
                 my $url = $controller->url_for( $route_name,
                                       id => $fk_object->get_primary_key_value );
-                $return_string .=
+                
+                if (any { $_ eq $column_name } @no_link_foreign_key ) {
+                    $return_string .=
+                  " <td $td_attributes > $fk_value </td> ";
+                }else {
+                    $return_string .=
                   " <td $td_attributes > <a href='$url'>$fk_value </a> </td> ";
+                  
+                }
+                
+                
+                  
+                  
             } else
             {
                 $return_string .= "<td $td_attributes >" . $fk_value . '</td>';
@@ -665,15 +745,16 @@ sub _get_rows_for_dataobject_list
 
 sub _get_rows_for_many
 {
-    my $self = shift;
-    my %args                   = @_;
-    my $object                 = $args{object};
-    my $controller             = $args{controller};
-    
-    my $td_attributes     = $args{'td_attributes'} || '';
-    my $tr_attributes     = $args{'tr_attributes'} || '';
-    
-    my $class= $args{class} || '';
+    my $self       = shift;
+    my %args       = @_;
+    my $object     = $args{object};
+    my $controller = $args{controller};
+
+    my $td_attributes = $args{'td_attributes'} || '';
+    my $tr_attributes = $args{'tr_attributes'} || '';
+
+    my $class = $args{class} || '';
+
     #$self->_set_global_values(@_);
     my $member_name  = $args{member_name};
     my $label        = $args{label} || '&nbsp;';
@@ -687,7 +768,7 @@ sub _get_rows_for_many
     {
         next unless ($many_object);
         my $many_string = $many_object->to_string;
-        my $route_name  =
+        my $route_name =
           $self->_get_route_name_for_object( $many_object, "_show" );
         my $url = $controller->url_for( $route_name,
                                     id => $many_object->get_primary_key_value );
@@ -700,23 +781,21 @@ sub _get_rows_for_many
 sub _get_options_for_many
 {
     my $self = shift;
+
     #$self->_set_global_values(@_);
-     my %args                   = @_;
-     my $object                 = $args{object};
-    
-    
-    
+    my %args   = @_;
+    my $object = $args{object};
+
     my $member_name  = $args{member_name};
     my $label        = $args{label};
     my $method_name  = "get_" . $member_name;
     my @many_objects = $object->$method_name;
 
-    
     my $type = $object->get_type_for_many_member($member_name);
     print "TYPE $type MEMBER $member_name\n";
     my @all_many_objects = $type->find_all();
     my $return_string    = "";
-    
+
     foreach my $many_object (@all_many_objects)
     {
         my $many_string = $many_object->to_string;

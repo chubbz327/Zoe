@@ -4,7 +4,8 @@
         for='<%= "$column_name" %>'><%= "$fk_member" %>
     </label>
     <div class="col-sm-10">
-        <select name='<%= "$prefix$column_name" %>'
+        <select <%= $disabled %>
+                    name='<%= "$prefix$column_name" %>'
                     class='<%= "$input_class "%>' 
                     id='<%= "$prefix$primary_key_name" %>' >
                     <option value=''>...</option>
@@ -18,7 +19,7 @@
 %                   my $fk_id        = $fk->get_primary_key_value();
 %                   my $fk_to_string = $fk->to_string();
 %               
-                 <option value='<%=$fk_id%>' $selected ><%="$fk_to_string"%> </option>
+                 <option value='<%=$fk_id%>' <%= $selected %>  ><%="$fk_to_string"%> </option>
 %           }
         </select>
     </div> <!-- end input--> 

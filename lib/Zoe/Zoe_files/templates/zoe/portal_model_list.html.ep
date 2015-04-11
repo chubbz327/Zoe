@@ -1,0 +1,39 @@
+
+% layout $layout;
+
+% my %helper_options = %{ $helper_opts }; 
+
+
+
+%my $search_value = '';
+%if (defined ($search)) {
+%$search_value = 'for search: ' . $search; 
+%}
+
+
+
+<div>
+%== get_pagination( object => $object, limit => $limit, offset => $offset, count=>$count, order_by => $order_by, search => $search );
+<br>
+
+
+<%= $count . " $type " %> returned <%= $search_value %><br>
+
+
+
+
+
+</div>
+<table class='table table-striped'>
+<thead>
+%== get_tableheading( object => $object, %helper_options, prettyfy => 1);
+</thead>
+
+<tbody>
+
+% foreach my $object ( @{$all} ) {
+    %== get_rows_for_dataobject_list( object=>$object, resolve_relationships => 1 ,  %helper_options, prettyfy => 1);
+	
+%}
+</tbody>
+</table> 

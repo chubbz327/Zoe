@@ -217,7 +217,8 @@ sub create
     my $message = $args{message} || "$type created";
     my $object = $type->new();
 
-    my $url = ( $args{url} || $self->_get_success($object) );
+    my $url     = ( $args{url} || $self->stash('next_url') || $self->param('next_url') || $self->_get_success($object) );
+
 
     $object = $self->_set_values_from_request_param($object);
     if ( $object->is_auth_object() )
@@ -320,7 +321,7 @@ sub update
     my $message = $args{message} || "$type updated";
     my $id      = $self->param('id');
     my $object  = $type->find($id);
-    my $url     = ( $args{url} || $self->_get_success($object) );
+    my $url     = ( $args{url} || $self->stash('next_url') || $self->param('next_url') || $self->_get_success($object) );
 
     $object = $self->_set_values_from_request_param($object);
     my $update_object;
@@ -416,7 +417,7 @@ sub show_all
       $self->stash('template') || $args{template} || 'zoe/show_all';
 
     my $limit =
-      $args{limit} || $self->param('limit') || $self->stash('limit') || -1;
+      $args{limit} || $self->param('limit') || $self->stash('limit') || 10;
 
     my $where = $args{where} || $self->stash('where') || {};
     
@@ -644,6 +645,10 @@ sub show_create_edit
 
 sub portal_search {
     my $self =shift;
+    my $type = $self->param('__TYPE__');
+    
+    return $self->search(@_) if ($type);
+    
     my %args = @_;
     
     my $portal = $self->get_portal();
@@ -752,7 +757,7 @@ sub search
           );
     }
 
-    $layout = $args{layout} || $layout;
+    $layout = $args{layout} || $self->stash('layout') || $layout;
     if (@args)
     {
         return

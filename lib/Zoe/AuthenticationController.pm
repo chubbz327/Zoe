@@ -17,20 +17,27 @@ my $is_verbose = 1;
 
 sub logout {
     my $self = shift;
+     my $show_login ='__SHOWLOGIN__' ;
     
     my $url;
     
-    if ($self->param('requested_url') ) {
-        $url = $self->param('requested_url');
+    if ($self->param('requested_url') || $self->stash('default_index') ) {
+        $url = $self->param('requested_url') || $self->stash('default_index');
+        
+        $self->session(expires => 1);
+        $self->redirect_to($url);
         
     }else {
-        
-        $url = $self->url_for('__SHOWLOGIN__')->query( message=>'You have been logged out');
+        my $portal = $self->get_portal() || {};
+         my $name_prefix = $portal->{url_prefix} || '';
+ $name_prefix =~ s/\///gmx;
+    $show_login  = $name_prefix . '__SHOWLOGIN__';
+        $url = $self->url_for($show_login)->query('message' => 'You have logged out')
     }
-   
-    $self->session(expires => 1);
-    $self->redirect_to($url);
-    return;
+$self->session(expires => 1);
+    
+    
+    return $self->redirect_to($url);
     
 }
 
@@ -39,15 +46,17 @@ sub show_login {
     my $auth_config = $self->get_auth_config();
     my $default_index = $auth_config->{default_index};
     my $message = ($self->param('message') ||  "Please enter login credentials");
-    my $url = $self->url_for('__SHOWLOGIN__');
-    my $requested_url = ($self->param('requested_url') || $default_index);
+    my $url = $self->url_for();
+   
+    my $requested_url = ( $self->param('requested_url') || $self->stash('default_index') || $self->stash('url_prefix') || $default_index );
     
-    print "REQUESTED_URL $requested_url\n\n";
-    my $template = $auth_config->{login_template};
+    my $layout = ($self->stash('layout') || '');
+    my $template = $self->stash('template') || $auth_config->{login_template};
     $self->render(      message=> $message, 
                         url => $url,
                         template => "$template",
-                        requested_url => $requested_url
+                        requested_url => $requested_url,
+                        layout => $layout, 
                         );
 }
 
@@ -110,10 +119,10 @@ sub do_login {
             
         }
       
-        my $template = $auth_config->{login_template};
+        my $template = $self->stash('template') || $auth_config->{login_template};
         my $login_user_param = $auth_config->{login_user_param};
         my $login_user_param_value = $self->param($login_user_param);
-         my $requested_url = ($self->param('requested_url') || $default_index);
+         my $requested_url = ($self->stash('url_prefix') || $self->param('requested_url') || $default_index);
         debug(__PACKAGE__ . "Login failed, rendering template " .   $template , $is_verbose);
         
         my $auth_page = $self->param('auth_page');

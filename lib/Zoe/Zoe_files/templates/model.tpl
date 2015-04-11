@@ -36,6 +36,8 @@ sub new {
 
     my $type = shift;
     my $self = __PACKAGE__->SUPER::new( @_, SQL => $sql );
+    
+    #$self->{TO_STRING} = to_string($self);
     return bless $self;
 }
 sub get_column_info {

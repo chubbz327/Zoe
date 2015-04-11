@@ -2,8 +2,22 @@
 %#                      search, 
 
 % my $portal = get_portal();
+% my $url_prefix = $portal->{url_prefix};
+% $url_prefix .= '/' unless ( $url_prefix =~ /\/$/ );
 
 % my $portal_name = $portal->{name};
+% my $search_path = $url_prefix . $portal->{search}->{path} || '';
+% my $form_attributes = $portal->{search}->{form_attributes} || {};
+% my $hidden_inputs = $portal->{search}->{hidden_inputs} || {};
+
+% my  $search_method  = $portal->{search}->{method} || 'post'; 
+% my $user = get_user_from_session() || {};
+% my $name_prefix = $portal->{url_prefix};
+% $name_prefix =~ s/\///gmx;
+% my $show_login  = $name_prefix . '__SHOWLOGIN__';
+% my $do_logout  = $name_prefix . '__DOLOGOUT__';
+
+ 
 
 
 
@@ -67,14 +81,44 @@
                  -->
                 
             </ul>
-            <form role="search" class="navbar-form navbar-left">
+ % if ($portal->{search} ) {
+            <form role="search" class="navbar-form navbar-left"
+            method='get'
+            action='<%= $search_path %>'
+            
+            % foreach my $att_name ( keys(%{$form_attributes})) {
+            <%= $att_name %>= '<%= $form_attributes->{$att_name} %>'       
+            
+            % }
+            
+            >
                 <div class="form-group">
-                    <input type="text" placeholder="Search" class="form-control">
+                    <input name='search' type="text" placeholder="Search" class="form-control">
                 </div>
+                
+          % foreach my $name ( keys(%{$hidden_inputs})) {
+            <input name='<%= $name %>' type='hidden' value='<%= $hidden_inputs->{$name} %>' />      
+            
+            % }      
+                
+                
             </form>
+ % }
+ 
+ % if ( $portal->{authentication} ) {
+%            if ($user ) {
             <ul class="nav navbar-nav navbar-right">
-                <li><a href="#">Login</a></li>
+        
+                <li><a href="<%= url_for()%>">Welcome <%= $user->{TO_STRING} %> </a></li>
+                <li><a href="<%= url_for( $do_logout )%>">Logout</a></li>
             </ul>
+%            }else {
+            
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="<%= url_for( $show_login )%>">Login</a></li>
+            </ul>
+            % } 
+       % }
         </div>
     </nav>
 </div>

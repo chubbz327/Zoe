@@ -1,11 +1,11 @@
  <div class="form-group">
- 
+
     <label  class="col-sm-2 control-label" for='<%= $column_name%>'> <%= $pretty_name %>
     </label>
     <div class="col-sm-10">
 % if ( $check_input eq 'textarea' ) {
 
-        <textarea class='<%= $input_class %>' id='<%= "$prefix$column_name"%>' name='<%= "$prefix$column_name"%>' >
+        <textarea   <%= $disabled %> class='<%= $input_class %>' id='<%= "$prefix$column_name"%>' name='<%= "$prefix$column_name"%>' >
             <%= $value %>
         </textarea>
 
@@ -35,7 +35,8 @@
 %   $checked = 'checked="checked"'
 %   if ( $object->$method_name() );
 
-        <input  type='<%=  $input_type %>'
+        <input  <%= $disabled %>
+                 type='<%=  $input_type %>'
                 class='<%=  $input_class %>' 
                 id='<%= "$prefix$column_name" %>'
                 name='<%= "$prefix$column_name" %>' 
@@ -43,7 +44,8 @@
                 />
                 
 % } else {
-        <input  type='<%=  $input_type %>'
+        <input  <%= $disabled %>
+         type='<%=  $input_type %>'
                 class='<%=  $input_class %>' 
                 id='<%= "$prefix$column_name" %>' 
                 name='<%= "$prefix$column_name"%>' 

@@ -1,4 +1,10 @@
+ 
 <ul class="pagination">
+
+ 
+
+
+% my $type = stash("__TYPE__");
 
 <li><a href="<%= $prev_url %>">Prev</a></li>
 %   my $page_num = 1;
@@ -14,7 +20,8 @@
 %                                                        order_by => $order_by,
 %                                                        offset   => $i,
 %                                                        limit    => $limit,
-%                                                        search   => $search
+%                                                        search   => $search,
+%                                                         __TYPE => $type,
 %                                                      ]
 %        );
         <li><a href="<%= $paged_url %>"><%=$page_num %></a></li>

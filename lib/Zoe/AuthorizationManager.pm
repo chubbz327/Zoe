@@ -30,6 +30,7 @@ sub do_check
 {
     my $self                = shift;
     my $controller          = shift;
+    my $url_prefix          = shift || '/__ADMIN__/';
     my $request_http_method = $controller->req->method;
 
     my $user_yaml =
@@ -54,10 +55,10 @@ sub do_check
     }
 
     my $requested_url = $controller->req->url->path;
-    my $login_url     = $controller->url_for("__SHOWLOGIN__");
-    my $logout_url    = $controller->url_for("__DOLOGOUT__");
-    return 1 if ( $login_url eq $requested_url );
-    return 1 if ( $logout_url eq $requested_url );
+    my $login_url     =  ($auth_config->{login_path} || 'login');
+    my $logout_url    =  $url_prefix . ($auth_config->{logout_path} || 'login');
+    return 1 if ( $requested_url =~  /$login_url/ );
+    return 1 if ( $requested_url =~ /$logout_url/ );
 
     #return 1 if ($requested_url eq "/");
     return 1 if ( $requested_url =~ /assets/ );
@@ -106,7 +107,7 @@ sub _match_role
     my $self                = shift;
     my $route               = shift;
     my $user                = shift;
-    my $role_string         = shift;
+    my $role_string         = shift || '__anonymouns__';
     my $requested_url       = shift;
     my $request_http_method = shift;
 
