@@ -99,6 +99,7 @@ sub do_check {
     $user->{$salt_member} = '';
     
     $user->{TO_STRING} = $user->to_string();
+    $user->{PRIMARY_KEY_VALUE} = $user->get_primary_key_value();
 
     $controller->session( $auth_config->{user_session_key}, => YAML::XS::Dump( $user ) );
     
@@ -112,11 +113,15 @@ sub do_check {
     if (ref($roles) eq 'ARRAY') {
         foreach my $role ( @{$roles} ) {
              $role->{DBH} = {};
+             $role->{TO_STRING} = $role->to_string();
+             $role->{PRIMARY_KEY_VALUE} = $role->get_primary_key_value();
         }
         
     }else {
         
         $roles->{DBH} = {};
+        $roles->{TO_STRING} = $roles->to_string();
+        $roles->{PRIMARY_KEY_VALUE} = $roles->get_primary_key_value();
     }
  
    

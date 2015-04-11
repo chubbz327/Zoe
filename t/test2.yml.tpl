@@ -192,7 +192,7 @@ authorization:
          http_method: any
          match_roles:
            - name: admin           
-           - name: user
+           - name: users
            - name: manager                           
       -  path: .*
          method: match_role
@@ -335,6 +335,7 @@ portals:
         stash: 
           __TYPE__: Namespace::Task
           template: 'zoe/portal_create_edit'
+          form_submit_path_name: __save_task__
           helper_opts:
             no_edit: 1
             set_as_disabled:
@@ -344,10 +345,51 @@ portals:
               - Project_ID
               - description
 
+      - name: save_task  
+        route_name: __save_task__
+        controller: Zoe::ZoeController
+        action: update
+        path: save_task/:id
+        method: post  
+        stash: 
+          __TYPE__: Namespace::Task
+          next_url_name: '__edit_task__'
 
 
-     
+
+
+
+      - name: edit_user  
+        route_name: __edit_user__
+        controller: Zoe::ZoeController
+        action: show_edit
+        path: edit_user/:id
+        method: get #get is default
+        stash: 
+          __TYPE__: Namespace::User
+          template: 'zoe/portal_create_edit'
+          form_submit_path_name: __save_user__
+          helper_opts:
+            set_as_disabled:
+              - ID
+              - Role_ID
+
+
+      - name: save_user  
+        route_name: __save_user__
+        controller: Zoe::ZoeController
+        action: update
+        path: save_user/:id
+        method: post  
+        stash: 
+          __TYPE__: Namespace::User
+          next_url_name: '__edit_user__'
+
+
+
+
     authentication:
+        admin_role:                             # defaults to admin
         login_path:                             # defaults to url_prefix . login 
         login_controller:                       # default Zoe::AuthenticationController
         login_show_method:                      # default show_login
@@ -359,5 +401,5 @@ portals:
         logout_path:                            # $url_pefix . logout
         logout_controller:                      # Zoe::AuthenticationController
         logout_do_method:                       # logout  
-       
+        edit_info_route_name: __edit_user__
           

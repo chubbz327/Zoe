@@ -15,6 +15,7 @@ use Pod::Simple::Search;
 BEGIN { unshift @INC, "$FindBin::Bin/../" }
 use Data::GUID;
 use Path::Class;
+ use TryCatch;
 my $layout = 'zoe';
 
 sub save_all_models
@@ -217,7 +218,10 @@ sub create
     my $message = $args{message} || "$type created";
     my $object = $type->new();
 
-    my $url     = ( $args{url} || $self->stash('next_url') || $self->param('next_url') || $self->_get_success($object) );
+    my $next_url_name = $self->stash('next_url_name') || $self->param('next_url_name') || 0;    
+    my $url;
+    $url = $self->url_for($next_url_name) if ($next_url_name);      
+    $url     = ( $args{url} || $self->_get_success($object) ) unless($url);
 
 
     $object = $self->_set_values_from_request_param($object);
@@ -245,7 +249,7 @@ sub _check_is_admin_or_self
     my %auth_info    = %{ $auth_config->{config}->{data_object} };
     my $object_id    = $object->get_primary_key_value();
     my $current_role = $self->session( $auth_config->{role_session_key} ) || 0;
-    my $current_user_id = $self->session( $auth_config->{user_session_key} )
+    my $current_user = $self->get_user_from_session()
       || 0;
     my $admin_role = $auth_info{admin_role};
 
@@ -253,7 +257,7 @@ sub _check_is_admin_or_self
 
     return 1 if ( $admin_role eq $current_role );
 
-    return 1 if ( $object_id == $current_user_id );
+    return 1 if ( $object_id == $current_user->{PRIMARY_KEY_VALUE});
     return 0;
 }
 
@@ -321,7 +325,15 @@ sub update
     my $message = $args{message} || "$type updated";
     my $id      = $self->param('id');
     my $object  = $type->find($id);
-    my $url     = ( $args{url} || $self->stash('next_url') || $self->param('next_url') || $self->_get_success($object) );
+    
+
+    my $next_url_name = $self->stash('next_url_name') || $self->param('next_url_name') || 0;    
+    my $url;
+    $url = $self->url_for($next_url_name)->query([id => $id, message => $message]) if ($next_url_name);      
+    $url     = ( $args{url} || $self->_get_success($object) ) unless($url);
+    $self->flash('message',  $message);
+
+
 
     $object = $self->_set_values_from_request_param($object);
     my $update_object;

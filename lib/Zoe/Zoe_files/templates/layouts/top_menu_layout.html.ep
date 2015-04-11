@@ -17,6 +17,7 @@
 % my $show_login  = $name_prefix . '__SHOWLOGIN__';
 % my $do_logout  = $name_prefix . '__DOLOGOUT__';
 
+
  
 
 
@@ -109,7 +110,9 @@
 %            if ($user ) {
             <ul class="nav navbar-nav navbar-right">
         
-                <li><a href="<%= url_for()%>">Welcome <%= $user->{TO_STRING} %> </a></li>
+                <li><a 
+                  href="<%= url_for($portal->{authentication}->{edit_info_route_name}, id=>$user->{PRIMARY_KEY_VALUE})%>">
+                Welcome <%= $user->{TO_STRING} %> </a></li>
                 <li><a href="<%= url_for( $do_logout )%>">Logout</a></li>
             </ul>
 %            }else {

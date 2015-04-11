@@ -53,6 +53,20 @@ sub startup
 
         }
     );
+    
+    $self->helper(
+        get_admin_role_names => sub {
+            my $c           = shift;
+            my $auth_config = $c->get_auth_config();
+            my $admin_role = $auth_config->{admin_role};
+            my $portal  =   $self->get_portal();
+            my $portal_admin_role; 
+            $portal_admin_role = $portal->{authentication}->{admin_role};
+            
+            return [$admin_role, $portal_admin_role];
+
+        }
+    );    
 
     #returns path to the config dir
     $self->helper(

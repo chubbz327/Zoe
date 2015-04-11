@@ -1,6 +1,4 @@
-
-
-
+%  use List::MoreUtils qw{any};
 
 % layout $layout;
 % my %helper_options = %{ $helper_opts }; 
@@ -8,13 +6,20 @@
 % my $password_member = $auth_object_info{password_member} ||0 ;
 % my $salt_member = $auth_object_info{salt_member} || '';
 % my @ignore = ($salt_member, $password_member); #empty if not auth object
-% $object_action	= $type . $object_action;
-% $object_action =~ s/\:\:/_/g;
-% $object_action = lc ($object_action);
+ 
 % my %linked_create = %{$object->get_linked_create()};
 
-% my $url = url_for( $object_action );
-% $url = url_for( $object_action , id=>$object->get_primary_key_value) if ($object->get_primary_key_value);
+
+% my $form_submit_path_name = stash('form_submit_path_name') ;
+% my $url = url_for( $form_submit_path_name );
+
+% $url = url_for( $form_submit_path_name  , id=>$object->get_primary_key_value) if ($object->get_primary_key_value);
+
+% my $role = get_role_from_session();
+% my $admin_roles = get_admin_role_names();
+
+    
+    %= flash('message');
     
     <form   method='POST' action='<%= $url %>' 
             id='form_<%=$object->get_primary_key_value %>'
@@ -54,6 +59,19 @@
             equalTo='#password' />
         </div>
 </div>
+%= dumper $role;
+
+% unless ( any {$_ eq $role->{TO_STRING}} @$admin_roles ) {
+<div class="form-group">
+        
+        <label class="col-sm-2 control-label" for="old_password">Current Password</label>
+        <div class="col-sm-10">
+            <input  type='password'  class='required form-control' 
+              id="old_password" name="old_password" 
+            size="25" value=""  minlength="1" class='form-control'  />
+        </div>
+</div>
+% }
 
 %}
 
