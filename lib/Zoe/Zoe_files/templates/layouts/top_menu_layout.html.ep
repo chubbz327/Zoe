@@ -107,7 +107,7 @@
  % }
  
  % if ( $portal->{authentication} ) {
-%            if ($user ) {
+%            if ($user->{TO_STRING} ) {
             <ul class="nav navbar-nav navbar-right">
         
                 <li><a 
@@ -119,7 +119,15 @@
             
             <ul class="nav navbar-nav navbar-right">
                 <li><a href="<%= url_for( $show_login )%>">Login</a></li>
-            </ul>
+           
+               % if ($portal->{authentication}->{create_user_route_name} ) {
+                <li><a 
+                  href="<%== url_for($portal->{authentication}->{create_user_route_name})%>">
+                Sign up </a>  
+                </li>
+               %} 
+               
+                </ul>
             % } 
        % }
         </div>

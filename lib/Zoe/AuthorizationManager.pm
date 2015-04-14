@@ -45,7 +45,6 @@ sub do_check
    # my $dumper = Data::Serializer->new();
     my $roles = YAML::XS::Load($roles_dump) || {}; #unserialize roles array
     
-    #print "ATUH " . Dumper $roles;
     #return 0 unless( $roles );
     if (defined($roles) ) {
     unless ( ref $roles eq 'ARRAY' )
@@ -121,7 +120,6 @@ sub _match_role
     $http_method         = lc($http_method);
     $request_http_method = lc($request_http_method);
 
-    #print "$request_http_method  $http_method\n\n";
     my $return =
       '';    # return can have 3 posible values pass , not_matched, failed
 
@@ -129,11 +127,9 @@ sub _match_role
 
     if ( $requested_url =~ /$route_path/igmx )
     {
-       print "\n\n\n\nHEREdinni\n\n\n\n\n\n\\n";
         debug( __PACKAGE__ . ": $route_path matches $requested_url " );
         foreach my $needed_role (@match_roles)
         {    #for this path *, all roles are accepted
-            print "$role_string NEEDED ROLE " . $needed_role->{name};
             if (    ( $needed_role->{name} =~ /\*/ )
                  && ( $request_http_method eq $http_method ) )
             {
@@ -168,9 +164,10 @@ sub _match_role
                     $is_verbose
                 );
                 
-                #return 'fail';
+                
             }
         }
+        return 'fail';
     }
 
     debug(

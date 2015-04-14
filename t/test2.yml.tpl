@@ -119,7 +119,7 @@ models:
 
      -  name: Role_ID
         type: integer
-        constraints: 
+        constraints: 'default 4'
         foreign_key: Namespace::Role
         member: Role
 
@@ -186,6 +186,22 @@ authorization:
          http_method: any
          match_roles:
            - name: admin
+
+
+      -  path: /__FRONTEND__/create_user.*
+         method: match_role
+         http_method: any
+         match_roles:
+           - name: .*  
+
+
+
+      -  path: /__FRONTEND__/save_user
+         method: match_role
+         http_method: any
+         match_roles:
+           - name: .*  
+
            
       -  path: /__FRONTEND__.*
          method: match_role
@@ -368,24 +384,57 @@ portals:
         stash: 
           __TYPE__: Namespace::User
           template: 'zoe/portal_create_edit'
-          form_submit_path_name: __save_user__
+          form_submit_path_name: __update_user__
           helper_opts:
             set_as_disabled:
               - ID
               - Role_ID
 
 
-      - name: save_user  
-        route_name: __save_user__
+      - name: update_user  
+        route_name: __update_user__
         controller: Zoe::ZoeController
         action: update
         path: save_user/:id
         method: post  
+        mandatory_values:
+          Role_ID: 4        
         stash: 
           __TYPE__: Namespace::User
           next_url_name: '__edit_user__'
 
 
+      - name: create_user  
+        route_name: __create_user__
+        controller: Zoe::ZoeController
+        action: show_create
+        path: create_user
+        method: get #get is default
+        default_values:
+          Role_ID: 4
+        stash: 
+          __TYPE__: Namespace::User
+          template: 'zoe/portal_create_edit'
+          
+          form_submit_path_name: __save_user__
+          helper_opts:
+            ignore: 
+              - Role_ID
+            set_as_disabled:
+              - ID
+              - Role_ID
+
+      - name: save_user  
+        route_name: __save_user__
+        controller: Zoe::ZoeController
+        action: create
+        path: save_user/
+        method: post  
+        mandatory_values:
+          Role_ID: 4        
+        stash: 
+          __TYPE__: Namespace::User
+          next_url_name: '__home_page__'
 
 
     authentication:
@@ -402,4 +451,5 @@ portals:
         logout_controller:                      # Zoe::AuthenticationController
         logout_do_method:                       # logout  
         edit_info_route_name: __edit_user__
+        create_user_route_name: __create_user__
           

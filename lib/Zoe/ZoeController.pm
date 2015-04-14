@@ -15,7 +15,7 @@ use Pod::Simple::Search;
 BEGIN { unshift @INC, "$FindBin::Bin/../" }
 use Data::GUID;
 use Path::Class;
- use TryCatch;
+use TryCatch;
 my $layout = 'zoe';
 
 sub save_all_models
@@ -173,7 +173,7 @@ sub log_not_authorized
                  . Dumper %param_values );
     my $res = $self->tx->res;
     $res->code(401);
-    $self->render( template => 'not_authorized' );
+    $self->render( template => 'not_authorized', status => 402 );
 }
 
 sub auth_create
@@ -218,17 +218,25 @@ sub create
     my $message = $args{message} || "$type created";
     my $object = $type->new();
 
-    my $next_url_name = $self->stash('next_url_name') || $self->param('next_url_name') || 0;    
+    my $next_url_name =
+      $self->stash('next_url_name') || $self->param('next_url_name') || 0;
     my $url;
-    $url = $self->url_for($next_url_name) if ($next_url_name);      
-    $url     = ( $args{url} || $self->_get_success($object) ) unless($url);
+    $url = $self->url_for($next_url_name) if ($next_url_name);
+    $url = ( $args{url} || $self->_get_success($object) ) unless ($url);
 
+    #set default values for object
+    $object = $self->_get_values_from_description( $object, 'default_values' );
 
     $object = $self->_set_values_from_request_param($object);
     if ( $object->is_auth_object() )
     {
         $object = $self->auth_create($object);
     }
+
+    #set mandatory values for object
+    $object =
+      $self->_get_values_from_description( $object, 'mandatory_values' );
+
     $object->save();
 
     $self->flash( message => $message );
@@ -241,6 +249,25 @@ sub create
     return;
 }
 
+sub _get_values_from_description
+{
+    my $self   = shift;
+    my $object = shift;
+    my $key    = shift;
+
+    my $page = $self->get_page();
+
+    return $object unless ( $page->{$key} );
+
+    foreach my $column_name ( $object->get_column_names() )
+    {
+        $object->{$column_name} = $page->{$key}->{$column_name}
+          if ( $page->{$key}->{$column_name} );
+    }
+
+    return $object;
+}
+
 sub _check_is_admin_or_self
 {
     my $self         = shift;
@@ -248,23 +275,24 @@ sub _check_is_admin_or_self
     my $auth_config  = $self->get_auth_config();
     my %auth_info    = %{ $auth_config->{config}->{data_object} };
     my $object_id    = $object->get_primary_key_value();
-    my $current_role = $self->session( $auth_config->{role_session_key} ) || 0;
+    my $current_role = $self->get_role_from_session() || {};
     my $current_user = $self->get_user_from_session()
-      || 0;
+      || {};
     my $admin_role = $auth_info{admin_role};
 
     return 1 if ( $admin_role eq '*' );
 
-    return 1 if ( $admin_role eq $current_role );
+    return 1 if ( $admin_role eq $current_role->{TO_STRING} );
 
-    return 1 if ( $object_id == $current_user->{PRIMARY_KEY_VALUE});
+    return 1 if ( $object_id == $current_user->{PRIMARY_KEY_VALUE} );
     return 0;
 }
 
 sub auth_update
 {
-    my $self   = shift;
-    my $object = shift;
+    my $self                  = shift;
+    my $object                = shift;
+    my $current_password_hash = shift;
 
     my $auth_config = $self->get_auth_config();
     my %auth_info   = %{ $auth_config->{config}->{data_object} };
@@ -272,47 +300,47 @@ sub auth_update
       ( $auth_info{salt_member}, $auth_info{password_member} );
 
     #if password is not being updated just return
-    my $password = $self->param('password');
+    my $new_password = $self->param('password_hash');
 
-    return $object unless ($password);
+    return $object unless (length ($new_password) );
+    print "NEW PASSWORD $new_password\n\n";
+    my $old_password = $self->param('old_password');
+
+    unless ($old_password)
+    {
+        $self->stash( 'message' => 'bad previous password' );
+        
+        throw Mojo::Exception->throw('__BAD_CURRENT_PASSWORD__');
+    }
 
    #make sure current user has rights to edit user or redirect_to not authorized
 
     #get current user
 
-    my $current_user;
-    if ( $self->session( $auth_config->{user_session_key} ) )
-    {
-        my $id = $self->session( $auth_config->{user_session_key} ) || 0;
-        $current_user = $object->find($id);
-    }
+    my $current_salt = $object->{$salt_member} || '';
 
-    my $current_salt = $current_user->{$salt_member} || '';
-    my $old_password = $self->param('old_password')  || '';
     my $old_password_hash = sha1_hex( $current_salt . $old_password );
 
-    #get the current role
-    my $role_name = '';
-    if ( $self->session( $auth_config->{role_session_key} ) )
-    {
-        $role_name = $self->session( $auth_config->{role_session_key} ) || 0;
-    }
-
-    # if admin or if admin_role == *
+#get the current role
+ 
+    # if new and old password match
     my $admin_role = $auth_info{admin_role};
-    if (    ( $admin_role eq '*' )
-         || ( $role_name eq $admin_role )
-         || ( $current_user->get_password_hash eq $old_password_hash ) )
+    if ( $current_password_hash eq $old_password_hash )
     {
         my $salt          = Data::GUID->new()->as_string;
-        my $password_hash = sha1_hex( $salt . $password );
+        my $password_hash = sha1_hex( $salt . $new_password );
 
         $object->{$password_member} = $password_hash;
         $object->{$salt_member}     = $salt;
         return $object;
+    } else
+    {
+        $self->flash( 'message', => 'Bad current password' );
+        
+        throw Mojo::Exception->throw('__BAD_CURRENT_PASSWORD__');
+
     }
 
-    die Mojo::Exception->new('__BAD_CURRENT_PASSWORD__');
 }
 
 sub update
@@ -322,21 +350,33 @@ sub update
     my $type = my $__TYPE__ =
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
     eval "use $type";
-    my $message = $args{message} || "$type updated";
-    my $id      = $self->param('id');
-    my $object  = $type->find($id);
-    
+    my $message     = $args{message} || "$type updated";
+    my $id          = $self->param('id');
+    my $object      = $type->find($id);
+    my $auth_config = $self->get_auth_config();
+    my %auth_info   = %{ $auth_config->{config}->{data_object} };
+    my ( $salt_member, $password_member ) =
+      ( $auth_info{salt_member}, $auth_info{password_member} );
 
-    my $next_url_name = $self->stash('next_url_name') || $self->param('next_url_name') || 0;    
+    my $current_password = $object->{$password_member};
+
+    my $next_url_name =
+      $self->stash('next_url_name') || $self->param('next_url_name') || 0;
     my $url;
-    $url = $self->url_for($next_url_name)->query([id => $id, message => $message]) if ($next_url_name);      
-    $url     = ( $args{url} || $self->_get_success($object) ) unless($url);
-    $self->flash('message',  $message);
+    $url =
+      $self->url_for($next_url_name)
+      ->query( [ id => $id, message => $message ] )
+      if ($next_url_name);
+    $url = ( $args{url} || $self->_get_success($object) ) unless ($url);
+    $self->flash( 'message', $message );
 
+    my $update_object;
 
+    #set default values for object
+    $object = $self->_get_values_from_description( $object, 'default_values' );
 
     $object = $self->_set_values_from_request_param($object);
-    my $update_object;
+
     if ( $object->is_auth_object() )
     {
 
@@ -344,20 +384,24 @@ sub update
         my $authorized = $self->_check_is_admin_or_self($object);
         unless ($authorized)
         {
-            my $url = $self->url_for('__NOTAUTHORIZED__')->query(
-                               [
+            return $self->log_not_authorized(
+                              
                                  object_id => $object->get_primary_key_value(),
                                  path      => $self->url_for()
-                               ]
+                               
             );
 
-            $self->redirect_to($url);
-            return;
+            
         }
         try
         {
-            $update_object = $self->auth_update($object);
-            $object        = $update_object;
+
+            $update_object = $self->auth_update( $object, $current_password );
+            $object = $update_object;
+
+            #set mandatory values for object
+            $object = $self->_get_values_from_description( $object,
+                                                           'mandatory_values' );
 
             $object->save;
 
@@ -399,19 +443,20 @@ sub _eval_where
     my $where = shift || {};
 
     my $new_where = {};
-    my $__USER__ = $self->get_user_from_session();
+    my $__USER__  = $self->get_user_from_session();
     foreach my $key ( keys( %{$where} ) )
     {
         my $value = $where->{$key};
+
         #$key = eval($key) || $key;
-        $new_where->{ $key } = $value;
-        $new_where->{ $key } = eval($value) unless(ref($value));
-        
+        $new_where->{$key} = $value;
+        $new_where->{$key} = eval($value) unless ( ref($value) );
+
         #$new_where->{ $key } = eval($value) ;
-       # $new_where->{ $key } = 1;
+        # $new_where->{ $key } = 1;
 
     }
-    print Dumper $new_where;
+
     return $new_where;
 }
 
@@ -419,7 +464,7 @@ sub show_all
 {
     my $self        = shift;
     my %args        = @_;
-   my $render_json = $args{render_json};
+    my $render_json = $args{render_json};
 
     my $type = my $__TYPE__ =
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
@@ -432,19 +477,15 @@ sub show_all
       $args{limit} || $self->param('limit') || $self->stash('limit') || 10;
 
     my $where = $args{where} || $self->stash('where') || {};
-    
-    $where  = $self->_eval_where($where);
-   
 
-   
-    
-     
+    $where = $self->_eval_where($where);
+
     my $object = $type->new;
     my $helper_opts = $args{helper_opts} || $self->stash('helper_opts') || {};
 
     my $order = $self->param('order_by') || $self->stash('order_by');
     my $offset = $self->param('offset') || $self->stash('offset') || 0;
-    $layout =  $args{layout}  || $self->stash('layout') || $layout;
+    $layout = $args{layout} || $self->stash('layout') || $layout;
 
     my $order_by = [];
     if ($order)
@@ -529,9 +570,9 @@ sub show
 {
     my $self = shift;
     my %args = @_;
-    my $type = my $__TYPE__ =
+    my $type = 
       $args{type} || $self->param('__TYPE__') || $self->stash('__TYPE__');
-
+    my $__TYPE__= $type;  
     eval "use $type";
 
     my $template = $args{template} || $self->stash('template') || 'zoe/show';
@@ -615,6 +656,13 @@ sub show_create_edit
     my $error_msg = $self->param('error_msg') || '';
     my $object    = $type->find($id) || $type->new;
 
+    #set default values for object
+    $object = $self->_get_values_from_description( $object, 'default_values' );
+
+    #set mandatory values for object
+    $object =
+      $self->_get_values_from_description( $object, 'mandatory_values' );
+
     my $helper_opts = $args{helper_opts} || $self->stash('helper_opts') || {};
 
     $layout = $args{layout} || $self->stash('layout') || $layout;
@@ -655,27 +703,28 @@ sub show_create_edit
 
 }
 
-sub portal_search {
-    my $self =shift;
+sub portal_search
+{
+    my $self = shift;
     my $type = $self->param('__TYPE__');
-    
+
     return $self->search(@_) if ($type);
-    
+
     my %args = @_;
-    
+
     my $portal = $self->get_portal();
-    
-    my %models = %{$portal->{models}};
-    my $limit = $portal->{search}->{limit};
+
+    my %models         = %{ $portal->{models} };
+    my $limit          = $portal->{search}->{limit};
     my $search_results = {};
-    foreach my $model (keys(%models)) {
+    foreach my $model ( keys(%models) )
+    {
         my $link_to = $models{$model};
-        $search_results->{$model}->{$link_to} = $self->search(
-            __TYPE__=> $model,
-            limit => $limit,             
-        );        
+        $search_results->{$model}->{$link_to} =
+          $self->search( __TYPE__ => $model,
+                         limit    => $limit, );
     }
-    
+
 }
 
 sub search
@@ -729,8 +778,8 @@ sub search
                                offset  => $offset,
                                where   => $where
     );
-    
-    return @all if ($args{return_all});
+
+    return @all if ( $args{return_all} );
 
     if ( $self->req->is_xhr() )
     {
@@ -894,7 +943,7 @@ sub _set_values_from_request_param
                 $object->{$column} = $self->param($column);
             } else
             {
-                # print Dumper $object;
+
                 my $type = $linked_create{$member_name};
                 eval "use $type";
 

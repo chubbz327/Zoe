@@ -1,7 +1,7 @@
 
 package    #__PACKAGENAME__;
 
-use Mojo::Base 'Mojolicious';
+  use Mojo::Base 'Mojolicious';
 use Mojolicious::Plugin::Config;
 use Zoe::Runtime;
 use YAML::XS;
@@ -36,8 +36,10 @@ sub startup
         get_user_from_session => sub {
             my $c           = shift;
             my $auth_config = $c->get_auth_config();
-            my $__USER__ = $c->session( $auth_config->{user_session_key} ) || 0;
-            $__USER__ = YAML::XS::Load($__USER__) if ($__USER__);
+            my $__USER__ =
+              $c->session( $auth_config->{user_session_key} ) || {};
+            $__USER__ = YAML::XS::Load($__USER__)
+              if ( $c->session( $auth_config->{user_session_key} ) );
 
             return $__USER__;
         },
@@ -47,26 +49,32 @@ sub startup
         get_role_from_session => sub {
             my $c           = shift;
             my $auth_config = $c->get_auth_config();
-            my $__ROLE__ = $c->session( $auth_config->{role_session_key} ) || 0;
-            $__ROLE__ = YAML::XS::Load($__ROLE__) if ($__ROLE__);
+            my $__ROLE__    = $c->session( $auth_config->{role_session_key} )
+              || { TO_STRING => 'anonymous' };
+            $__ROLE__ = YAML::XS::Load($__ROLE__)
+              if ( $c->session( $auth_config->{role_session_key} ) );
             return $__ROLE__;
 
         }
     );
-    
+
     $self->helper(
         get_admin_role_names => sub {
             my $c           = shift;
             my $auth_config = $c->get_auth_config();
-            my $admin_role = $auth_config->{admin_role};
-            my $portal  =   $self->get_portal();
-            my $portal_admin_role; 
+            my $admin_role =
+              $auth_config->{config}->{data_object}->{admin_role};
+            my $portal = $self->get_portal();
+            my $portal_admin_role;
             $portal_admin_role = $portal->{authentication}->{admin_role};
-            
-            return [$admin_role, $portal_admin_role];
+            my @return;
+            push( @return, $admin_role );
+
+            push( @return, $portal_admin_role ) if ($portal_admin_role);
+            return \@return;
 
         }
-    );    
+    );
 
     #returns path to the config dir
     $self->helper(
@@ -185,7 +193,25 @@ sub startup
         }
     );
 
-    #get portal portal
+    #get portal page
+
+    $self->helper(
+        get_page => sub {
+            my $self      = shift;
+            my $portal    = $self->get_portal();
+            my $page_name = $self->stash('page');
+            return unless ($page_name);
+            foreach my $page ( @{ $portal->{pages} } )
+            {
+                return $page if ( $page_name eq $page->{name} );
+            }
+
+            return;
+
+        }
+    );
+
+    #get portal
 
     $self->helper(
         get_portal => sub {
@@ -194,7 +220,7 @@ sub startup
 
             my $portals = $runtime->{portals} || [];
             my $portal_name = $self->stash('portal');
-
+            return unless ($portal_name);
             foreach my $portal ( @{$portals} )
             {
                 return $portal if ( $portal_name eq $portal->{name} );
@@ -224,27 +250,26 @@ sub startup
 
     $self->hook(
         around_action => sub {
-           my ($next, $c, $action, $last) = @_;
+            my ( $next, $c, $action, $last ) = @_;
             my $auth_config = $c->get_auth_config();
             my $__USER__    = $c->get_user_from_session();
-              return $next->() unless ($auth_config);
+            return $next->() unless ($auth_config);
 
             my $auth_success =
               Zoe::AuthorizationManager->new($auth_config)->do_check($c);
             if ($auth_success)
             {
 
-                  return $next->();
+                return $next->();
             } else
             {
                 #authorization failed; if logged in redirect_to Not authorized
 
-                
-                my $portal = $c->get_portal() || {};
-         my $name_prefix = $portal->{url_prefix} || '';
- $name_prefix =~ s/\///gmx;
-    my $show_login  = $name_prefix . '__SHOWLOGIN__';
-                
+                my $portal      = $c->get_portal()      || {};
+                my $name_prefix = $portal->{url_prefix} || '';
+                $name_prefix =~ s/\///gmx;
+                my $show_login = $name_prefix . '__SHOWLOGIN__';
+
                 my $redirect_name = '__SHOWLOGIN__';
 
                 $redirect_name = '__NOTAUTHORIZED__' if $__USER__;
@@ -264,6 +289,7 @@ sub startup
     #Add the login routes
     # Router
     my $r = $self->routes;
+
 #    if ($auth_config)
 #    {
 #        my $login_controller  = $auth_config->{login_controller};
@@ -292,7 +318,12 @@ sub startup
 #
 #    }
 
-$self->set_auth_routes();
+$r->any('/__NOTAUTHORIZED__')->name("__NOTAUTHORIZED__")->to(
+                                              action    => "log_not_authorized",
+                                              namespace => "Zoe::ZoeController",
+       );
+
+    $self->set_auth_routes();
 
     #set paypal routes
     my $paypal_config = $self->get_paypal_config();
@@ -382,34 +413,40 @@ $self->set_auth_routes();
                 my $path   = $url_prefix . $portal_search->{path};
                 my $r      = $self->routes;
                 my $method = $portal_search->{method} || 'any';
-                
-                
+
                 my $controller =
                   $portal_search->{controller} || 'Zoe::ZoeController';
                 my $action = $portal_search->{action} || 'portal_search';
-                
+
                 my $template = $portal_search->{template};
 
                 my $route_name = $portal_search->{route_name};
                 $r->$method($path)->name($route_name)->to(
-                    namespace => $controller,
-                    action    => $action,
-                    portal    => $portal_name,
-                    page      => $route_name,
-                    layout    => $layout,
-                    template  => $template, 
+                                                       namespace => $controller,
+                                                       action    => $action,
+                                                       portal   => $portal_name,
+                                                       page     => $route_name,
+                                                       layout   => $layout,
+                                                       template => $template,
                 );
-                
-                if($portal->{authentication}) {
-                    $portal->{authentication}->{stash}->{layout} = $portal->{layout};
-                    
-                    
-                    $portal->{authentication}->{stash}->{portal} = $portal->{portal};
-                    
-                    $self->set_auth_routes(authorization => $portal->{authentication}, url_prefix => $url_prefix, 
-                    default_index => $portal->{authentication}->{default_index},
-                    stash => $portal->{authentication}->{stash}, portal => $portal_name );
-                } 
+
+                if ( $portal->{authentication} )
+                {
+                    $portal->{authentication}->{stash}->{layout} =
+                      $portal->{layout};
+
+                    $portal->{authentication}->{stash}->{portal} =
+                      $portal->{portal};
+
+                    $self->set_auth_routes(
+                                   authorization => $portal->{authentication},
+                                   url_prefix    => $url_prefix,
+                                   default_index =>
+                                     $portal->{authentication}->{default_index},
+                                   stash  => $portal->{authentication}->{stash},
+                                   portal => $portal_name
+                    );
+                }
 
                 foreach my $page ( @{ $portal->{pages} } )
                 {
@@ -419,11 +456,12 @@ $self->set_auth_routes();
                     my $controller = $page->{controller};
                     my $action     = $page->{action};
                     my $route_name = $page->{route_name};
+                    my $page_name = $page->{name};
 
                     my $stash = $page->{stash};
                     my %stash = ();
                     %stash = %{$stash} if ($stash);
-                    print Dumper %stash; 
+                   
                     $self->stash( $route_name . 'stash' => \%stash )
                       ;    #add stash to route name for easy usage later
 
@@ -431,13 +469,14 @@ $self->set_auth_routes();
                         namespace => $controller,
                         action    => $action,
                         portal    => $portal_name,
-                        page      => $route_name,
+                        route_name => $route_name,
+                        page        => $page_name,
                         layout    => $layout,
 
                         %stash,
                     );
 
-                    #print "Controller $controller $action\n\n";
+                   
 
                 }
 
@@ -473,48 +512,66 @@ $self->set_auth_routes();
 
 }
 
-sub set_auth_routes {
-    
-    my $self= shift;
-     my $r = $self->routes;
-    my %args = @_;
-    my $stash =  $args{stash} || {};
+sub set_auth_routes
+{
+
+    my $self       = shift;
+    my $r          = $self->routes;
+    my %args       = @_;
+    my $stash      = $args{stash} || {};
     my $url_prefix = $args{url_prefix} || '/__ADMIN__/';
-    
-    my $portal =   $args{portal} || '';
-    
+
+    my $portal = $args{portal} || '';
+
     my $prefix_name = $args{url_prefix} || '';
     $prefix_name =~ s/\///gmx;
-    
+
     my $auth_config = $args{authorization} || $self->get_auth_config();
-    
-    my $login_controller  = $auth_config->{login_controller} || 'Zoe::AuthenticationController';
+
+    my $login_controller =
+      $auth_config->{login_controller} || 'Zoe::AuthenticationController';
     my $login_show_method = $auth_config->{login_show_method} || 'show_login';
-    my $login_do_method   = $auth_config->{login_do_method}|| 'do_login';
+    my $login_do_method   = $auth_config->{login_do_method}   || 'do_login';
 
-    my $logout_controller = $auth_config->{logout_controller} || 'Zoe::AuthenticationController';
-    my $logout_do_method  = $auth_config->{logout_do_method} || 'logout';
-    
-    my $login_path =  $auth_config->{login_path} || 'login';
-     my $logout_path =  $auth_config->{logout_path} || 'logout';
-     
-     my $template = $auth_config->{login_template};
+    my $logout_controller =
+      $auth_config->{logout_controller} || 'Zoe::AuthenticationController';
+    my $logout_do_method = $auth_config->{logout_do_method} || 'logout';
 
-        $r->get( $url_prefix . $login_path)->name($prefix_name . "__SHOWLOGIN__")->to(
-                                               action => "$login_show_method",
-                                               namespace => "$login_controller", %$stash, template => $template, portal => $portal,
-                                               url_prefix => $url_prefix, default_index => $args{default_index}
-                                               
-        );
-        $r->post( $url_prefix . $login_path )->name($prefix_name . "__DOLOGIN__")->to(
-                                               action    => "$login_do_method",
-                                               namespace => "$login_controller", %$stash, template => $template, portal => $portal,
-                                                url_prefix => $url_prefix, default_index => $args{default_index}
-        );
-        $r->any( $url_prefix . $logout_path )->name($prefix_name . "__DOLOGOUT__")->to(
-                                              action    => "$logout_do_method",
-                                              namespace => "$logout_controller", %$stash, template => $template, portal => $portal,
-                                               url_prefix => $url_prefix, default_index => $args{default_index}
-        );
+    my $login_path  = $auth_config->{login_path}  || 'login';
+    my $logout_path = $auth_config->{logout_path} || 'logout';
+
+    my $template = $auth_config->{login_template};
+
+    $r->get( $url_prefix . $login_path )
+      ->name( $prefix_name . "__SHOWLOGIN__" )->to(
+        action    => "$login_show_method",
+        namespace => "$login_controller",
+        %$stash,
+        template      => $template,
+        portal        => $portal,
+        url_prefix    => $url_prefix,
+        default_index => $args{default_index}
+
+      );
+    $r->post( $url_prefix . $login_path )->name( $prefix_name . "__DOLOGIN__" )
+      ->to(
+            action    => "$login_do_method",
+            namespace => "$login_controller",
+            %$stash,
+            template      => $template,
+            portal        => $portal,
+            url_prefix    => $url_prefix,
+            default_index => $args{default_index}
+      );
+    $r->any( $url_prefix . $logout_path )
+      ->name( $prefix_name . "__DOLOGOUT__" )->to(
+                                           action    => "$logout_do_method",
+                                           namespace => "$logout_controller",
+                                           %$stash,
+                                           template      => $template,
+                                           portal        => $portal,
+                                           url_prefix    => $url_prefix,
+                                           default_index => $args{default_index}
+      );
 }
 1;

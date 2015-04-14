@@ -426,7 +426,7 @@ sub _get_inputs_for_dataobject
 
     foreach my $column_name (@set_as_disabled)
     {
-        my $column_value = $object->{$column_name};
+        my $column_value = $object->{$column_name} || '';
         $return_string .=
 "<input type='hidden' name='$column_name' value='$column_value'/> <br>";
     }
@@ -569,7 +569,6 @@ sub _get_rows_for_dataobject
             if ($fk_object)
             {
                 
-                print "FK MEMEBER $fk_member $fk_method \n\n" . $object->get_member_for_column($column_name);
                 my $route_name =
                   $self->_get_route_name_for_object( $fk_object, "_show" );
                 my $url = $controller->url_for( $route_name,

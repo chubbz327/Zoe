@@ -15,7 +15,8 @@
 
 % $url = url_for( $form_submit_path_name  , id=>$object->get_primary_key_value) if ($object->get_primary_key_value);
 
-% my $role = get_role_from_session();
+% my $role = get_role_from_session() || {};
+% my $role_string = $role->{TO_STRING} || 'anonymous';
 % my $admin_roles = get_admin_role_names();
 
     
@@ -59,9 +60,11 @@
             equalTo='#password' />
         </div>
 </div>
-%= dumper $role;
+ 
 
-% unless ( any {$_ eq $role->{TO_STRING}} @$admin_roles ) {
+
+% unless ( any {$_ eq $role_string } @$admin_roles ) {
+% if ($object->get_primary_key_value() ) { 
 <div class="form-group">
         
         <label class="col-sm-2 control-label" for="old_password">Current Password</label>
@@ -71,6 +74,8 @@
             size="25" value=""  minlength="1" class='form-control'  />
         </div>
 </div>
+
+% }
 % }
 
 %}

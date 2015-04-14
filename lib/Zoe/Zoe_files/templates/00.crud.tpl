@@ -110,6 +110,11 @@ sub post_data {
         my $message = 'Created new ' . $object->get_object_type; 
 
     foreach my $column_name (@columns) {
+    	if ($object->is_auth_object()){
+    		my %auth_info = $object->auth_object_info();
+    		
+    		next if ($column_name eq $auth_info{password_member});
+    	}
         if ( $pk_member eq $column_name ) {   #pk field set on update not create
             if ( $object->get_primary_key_value ) {
 
