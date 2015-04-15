@@ -237,9 +237,12 @@ sub create
     $object =
       $self->_get_values_from_description( $object, 'mandatory_values' );
 
+    $self->_run_pre_render_handlers(object=>$object);
     $object->save();
 
     $self->flash( message => $message );
+    
+    $self->_run_pre_render_handlers(object=>$object);
 
     return $self->render(
                          json => { success => $object->get_primary_key_value } )
@@ -402,8 +405,10 @@ sub update
             #set mandatory values for object
             $object = $self->_get_values_from_description( $object,
                                                            'mandatory_values' );
-
+            
+            
             $object->save;
+            
 
         }
         catch
@@ -428,9 +433,13 @@ sub update
 
     } else
     {
+        
         $object->save;
 
     }
+    use Data::Dumper;
+    print Dumper $object->load($object->get_primary_key_value())->get_Artifacts();
+    $self->_run_pre_render_handlers(object=>$object);
 
 #return $self->render(json=>{success => ($object->get_primary_key_value )}) if $self->req->is_xhr;
     return $self->redirect_to($url);
@@ -516,6 +525,7 @@ sub show_all
                    type        => $type,
     );
 
+    $self->_run_pre_render_handlers(%return);
     #unbless objects -> turn into hash
     my @all_json = @all;
     foreach my $obj (@all_json)
@@ -582,6 +592,8 @@ sub show
 
     my $object = $type->find($id);
 
+    $self->_run_pre_render_handlers(object=>$object);
+    
     my %obj_hash = %{$object};
 
     if ( $self->req->is_xhr )
@@ -662,6 +674,10 @@ sub show_create_edit
     #set mandatory values for object
     $object =
       $self->_get_values_from_description( $object, 'mandatory_values' );
+      
+   
+   
+    $self->_run_pre_render_handlers(object=>$object);   
 
     my $helper_opts = $args{helper_opts} || $self->stash('helper_opts') || {};
 
@@ -778,6 +794,8 @@ sub search
                                offset  => $offset,
                                where   => $where
     );
+    
+    $self->_run_pre_render_handlers(allt=>@all);
 
     return @all if ( $args{return_all} );
 
@@ -1057,6 +1075,21 @@ sub handle_portal_request
                           layout   => $layout,
                           type     => $type
           );
+    }
+}
+    
+sub _run_pre_render_handlers {
+    my $self = shift;
+    my @pre_render_handlers = ();
+    @pre_render_handlers = @{ $self->stash('pre_render_handlers') } 
+        if ($self->stash('pre_render_handlers'));
+    foreach my $handler (@pre_render_handlers) {
+        foreach my $class (keys( %{ $handler})){
+            my $method = $handler->{$class};
+            
+            eval "use $class";
+            $class->new($self)->$method(@_);
+        }
     }
 }
 1;

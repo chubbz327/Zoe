@@ -299,9 +299,25 @@ sub _get_inputs_for_dataobject
     my $object      = $args{object};
     my %column_info = $object->get_column_info();
     my $controller  = $args{controller};
+    
+    
+    ###DOCUMENT THIS #####
+    #values are set as hidden values and displayed as disabled
     my @set_as_disabled;
     @set_as_disabled = @{ $args{set_as_disabled} }
       if ( $args{set_as_disabled} );
+    
+    # list of child objects that should not have select drop down displayed
+    
+    my @no_select_columns = ();
+    @no_select_columns = @{ $args{no_select_columns} } if ($args{no_select_columns} );
+    
+    
+     my @no_select_members = ();
+    @no_select_members = @{ $args{no_select_members} } if ($args{no_select_members} );
+        
+      push( @no_select_columns, @no_select_members); 
+      
 
     my $primary_key_value = $object->get_primary_key_value() || '';
     my $primary_key_name = $object->get_primary_key_name();
@@ -377,7 +393,7 @@ sub _get_inputs_for_dataobject
                 fk_pkey          => $fk_pkey,
                 disabled         => $disabled,
 
-            );
+            )  unless any { $column_name eq $_ } @no_select_columns;
             if ( defined( $linked_create{$fk_member} ) )
             {
                 $return_string .=
@@ -787,12 +803,23 @@ sub _get_options_for_many
 
     my $member_name  = $args{member_name};
     my $label        = $args{label};
+    
+    my @only_related_select_options = ();
+    @only_related_select_options = @{ $args{only_related_select_options} } 
+    if ($args{only_related_select_options} );
+    
+    print Dumper  @only_related_select_options;
     my $method_name  = "get_" . $member_name;
     my @many_objects = $object->$method_name;
 
     my $type = $object->get_type_for_many_member($member_name);
-    print "TYPE $type MEMBER $member_name\n";
-    my @all_many_objects = $type->find_all();
+    #print "TYPE $type MEMBER $member_name\n";
+    my @all_many_objects = ();
+    if (any {$_ eq $member_name} @only_related_select_options){
+         @all_many_objects = @many_objects;  
+    }else {
+         @all_many_objects = $type->find_all();
+    }    
     my $return_string    = "";
 
     foreach my $many_object (@all_many_objects)

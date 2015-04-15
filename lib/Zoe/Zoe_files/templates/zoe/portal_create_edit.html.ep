@@ -92,15 +92,23 @@
         <div class="form-group">
 		      
                  <label class="col-sm-2 control-label"for="<%= $member_name %>"><%= $member_name %></label>
+                         % my $no_select_members = $helper_options{no_select_members} || []; 
+       
+                              
+               % unless ( any { $_ eq $member_name  } @$no_select_members) {
                     <div class="col-sm-10">
+        
                     <select name="<%=$member_name %>" multiple='multiple' class='form-control'>
         	           <%== get_options_for_many(object=>$object, td_attributest=>'colspan="2" ',
-        			     member_name =>$member_name, label => $member_name);
+        			     member_name =>$member_name, label => $member_name,
+        			     %helper_options,
+        		);
         			     %>
     	           </select>
+    	          
     	       
     	           </div><!--end input -->
-    	        
+    	         % }
     	 </div>      
 	
 % }

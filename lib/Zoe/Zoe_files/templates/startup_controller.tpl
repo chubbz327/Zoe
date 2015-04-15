@@ -18,6 +18,12 @@ use Path::Class;
 use Carp;
 use Mojo::Log;
 
+
+use FindBin;
+BEGIN {
+    unshift @INC, "$FindBin::Bin/../app/lib";
+}
+
 #runtime
 my $runtime;
 
@@ -30,6 +36,10 @@ my $runtime;
 sub startup
 {
     my $self           = shift;
+    #add the application template directory
+    push @{$self->renderer->paths},  "$FindBin::Bin/../app/templates";
+    
+    
     my %OBJECT_FOR_URL = ();
 
     $self->helper(

@@ -5,9 +5,8 @@
     <div class="col-sm-10">
 % if ( $check_input eq 'textarea' ) {
 
-        <textarea   <%= $disabled %> class='<%= $input_class %>' id='<%= "$prefix$column_name"%>' name='<%= "$prefix$column_name"%>' >
-            <%= $value %>
-        </textarea>
+        <textarea   <%= $disabled %> class='<%= $input_class %>' id='<%= "$prefix$column_name"%>' name='<%= "$prefix$column_name"%>' 
+        ><%= $value %></textarea>
 
 % } elsif ( $check_input eq 'select' ) {
         <select name='<%= $column_name %>' <%= $input_class %> >
