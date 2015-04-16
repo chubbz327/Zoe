@@ -25,7 +25,7 @@
 %   my $to_string_name = $linked_object->get_to_string_member() || '0';
               <button type="button" class="btn btn-default"
                   onclick="add_to_request_param(  '<%=$column_name%>', 'ADD_<%= $member_name%>_', 
-                                                  '<%=$member_name%>', '<%= $to_string_name%>', 1 
+                                                  '<%=$member_name%>', '<%= $to_string_name%>', <%= $add_single %> 
                                                   )">
                   Add <%= $linked_object_short_name %>
                </button>

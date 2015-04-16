@@ -402,6 +402,7 @@ sub _get_inputs_for_dataobject
                                                linked_object => $fk_type->new(),
                                                member_name   => $fk_member,
                                                column_name   => $column_name,
+                                               add_single  => 1,
                   );
             }
         } else

@@ -70,7 +70,8 @@
 		      
                  <label class="col-sm-2 control-label"for="<%= $member_name %>"><%= $member_name %></label>
                     <div class="col-sm-10">
-                    <select name="<%=$member_name %>" multiple='multiple' class='form-control'>
+                    <select name="<%=$member_name %>"   class='form-control' multiple>
+                    <option value=''> ... </option>
         	           <%== get_options_for_many(object=>$object, td_attributest=>'colspan="2" ',
         			     member_name =>$member_name, label => $member_name);
         			     %>
@@ -82,6 +83,10 @@
 	
 % }
 % if( defined ( $linked_create{$member_name} ) ){
+
+
+
+
 %   my $linked_object = $linked_create{$member_name}->new();
 %   my $linked_object_short_name = $linked_object->get_object_type;
 %   $linked_object_short_name  =~ s/.*\:\:(\w+)$/$1/gmx;

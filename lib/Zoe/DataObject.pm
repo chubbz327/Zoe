@@ -830,15 +830,17 @@ sub save
     my %map = %{ $has_many{$type}->[$i] };
     my ( $member, $column ) = each(%map);
     eval {
-        
+my @collection = ();
+     @collection = @{ $self->{$member} }
+       if ( ( @{ $self->{$member} } ) );
+       
+               
      my @old_children = $type->find_all(where=>{$column=> $self->get_primary_key_value()});
      foreach my $old_child (@old_children) {
          $old_child->{$column} = 0;
          $old_child->save();
      }
-     my @collection = ();
-     @collection = @{ $self->{$member} }
-       if ( ( @{ $self->{$member} } ) );
+     
      foreach my $obj (@collection)
      {
 

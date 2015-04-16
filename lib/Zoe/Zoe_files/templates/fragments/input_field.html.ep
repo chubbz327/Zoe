@@ -10,7 +10,7 @@
 
 % } elsif ( $check_input eq 'select' ) {
         <select name='<%= $column_name %>' <%= $input_class %> >
-        <option> ... </option>
+        <option value=''> ... </option>
       
         
 

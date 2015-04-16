@@ -237,11 +237,11 @@ sub create
     $object =
       $self->_get_values_from_description( $object, 'mandatory_values' );
 
-    $self->_run_pre_render_handlers(object=>$object);
-    $object->save();
+    
+    my $id = $object->save();
 
     $self->flash( message => $message );
-    
+    print Dumper $object;
     $self->_run_pre_render_handlers(object=>$object);
 
     return $self->render(
@@ -438,7 +438,7 @@ sub update
 
     }
     use Data::Dumper;
-    print Dumper $object->load($object->get_primary_key_value())->get_Artifacts();
+    #print Dumper $object->load($object->get_primary_key_value())->get_Artifacts();
     $self->_run_pre_render_handlers(object=>$object);
 
 #return $self->render(json=>{success => ($object->get_primary_key_value )}) if $self->req->is_xhr;
@@ -991,8 +991,12 @@ sub _set_values_from_request_param
         my $type   = $object->get_type_for_many_member($member_name);
         eval "use $type";
 
-        my @id_list = $self->param($member_name);
-
+        my @id_list = @{$self->every_param($member_name)};
+        @id_list = $self->param($member_name .'[]') unless (@id_list);
+        print Dumper @id_list;
+       
+       
+       
         $log->debug( "member_name $member_name" . Dumper @id_list );
         my @object_list;
 
