@@ -300,6 +300,11 @@ sub _get_inputs_for_dataobject
     my %column_info = $object->get_column_info();
     my $controller  = $args{controller};
     
+    #used to avoid attribute name conficts in generated forms
+    my $req_var_prefix = $object->{TYPE};
+    $req_var_prefix =~ s/\:\:/_/gmx;
+    $req_var_prefix .= '.';
+    
     
     ###DOCUMENT THIS #####
     #values are set as hidden values and displayed as disabled
@@ -322,7 +327,7 @@ sub _get_inputs_for_dataobject
     my $primary_key_value = $object->get_primary_key_value() || '';
     my $primary_key_name = $object->get_primary_key_name();
 
-    my $prefix   = $args{prefix}   || '';
+    my $prefix   = $args{prefix}   || $req_var_prefix;
     my $prettyfy = $args{prettyfy} || 0;
 
     my @order  = ();

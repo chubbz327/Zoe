@@ -925,12 +925,20 @@ sub _set_values_from_request_param
 {
 
     my ( $self, $object ) = @_;
+  
     my $pkey_name     = $object->get_primary_key_name();
     my @columns       = $object->get_column_names();
     my %column_info   = $object->get_column_info();
     my $log           = $self->get_logger('debug');
     my %linked_create = %{ $object->get_linked_create() };
-
+    #used to avoid attribute name conficts in generated forms
+    my $req_var_prefix = $object->{TYPE};
+    $req_var_prefix =~ s/\:\:/_/gmx;
+    $req_var_prefix .= '.';   
+    my $prefix = $self->stash('request_variable_prefix')  ||   $self->param('request_variable_prefix') || $req_var_prefix; 
+   
+   
+   
     foreach my $column (@columns)
     {
         my $member_name = $object->get_member_for_column($column) || 0;
@@ -956,9 +964,9 @@ sub _set_values_from_request_param
                   && ( defined( $linked_create{$member_name} ) )
                   && $self->param($column) )
         {
-            if ( $self->param($column) =~ /^\d+$/ )
+            if ( $self->param($prefix . $column) =~ /^\d+$/ )
             {    #object was selected from drop dwon
-                $object->{$column} = $self->param($column);
+                $object->{$column} = $self->param($prefix .$column);
             } else
             {
 
@@ -966,7 +974,7 @@ sub _set_values_from_request_param
                 eval "use $type";
 
                 my $belongs_to_ob =
-                  $type->new( %{ json_to_perl( $self->param($column) ) } );
+                  $type->new( %{ json_to_perl( $self->param($prefix . $column) ) } );
                 $belongs_to_ob->save();
                 $object->{$column} = $belongs_to_ob->get_primary_key_value();
 
@@ -975,8 +983,8 @@ sub _set_values_from_request_param
         } else
         {
 
-            my $value = $self->param($column);
-            $object->$method($value) if ($value);
+            my $value = $self->param($prefix . $column) || '';
+            $object->$method($value);
         }
     }
 
@@ -986,13 +994,21 @@ sub _set_values_from_request_param
 
     foreach my $member_name (@members)
     {
+        
+   
+   
 
         my $method = 'set_' . $member_name;
         my $type   = $object->get_type_for_many_member($member_name);
         eval "use $type";
+        
+        my $req_var_prefix = $type;
+        $req_var_prefix =~ s/\:\:/_/gmx;
+        $req_var_prefix .= '.';   
+        my $prefix =  $req_var_prefix; 
 
         my @id_list = @{$self->every_param($member_name)};
-        @id_list = $self->param($member_name .'[]') unless (@id_list);
+      
         print Dumper @id_list;
        
        
@@ -1019,8 +1035,11 @@ sub _set_values_from_request_param
 
                 #id is a json string containing object values
                 my $values = json_to_perl($id);
-                foreach my $rel_column ( keys %{$values} )
+                foreach my $request_param_name ( keys %{$values} )
                 {
+                    my $rel_column = $request_param_name;
+                    $rel_column =~ s/$prefix//gmx;
+                    $values->{$rel_column} = $values->{$request_param_name};
                     my $rel_input_type = $rel_column_info{$rel_column};
                     next unless $rel_input_type;    # ignore empty entry json
 

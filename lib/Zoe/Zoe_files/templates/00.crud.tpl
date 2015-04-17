@@ -107,6 +107,10 @@ sub post_data {
     my $pk_member        = $object->get_primary_key_name;
     my %column_info      = $object->get_column_info;
     
+    my $req_var_prefix = $object->{TYPE};
+    $req_var_prefix =~ s/\:\:/_/gmx;
+    $req_var_prefix .= '.';  
+    
         my $message = 'Created new ' . $object->get_object_type; 
 
     foreach my $column_name (@columns) {
@@ -119,7 +123,7 @@ sub post_data {
             if ( $object->get_primary_key_value ) {
 
                 #object already saved
-                $form->{$column_name} = $object->get_primary_key_value;
+                $form->{$req_var_prefix . $column_name} = $object->get_primary_key_value;
                 $message = "Updated " . $object->get_object_type . " with primary key of " . $object->get_primary_key_value;
                 next;
             }
@@ -127,19 +131,19 @@ sub post_data {
         my $fk_type = $object->get_foreign_key_type($column_name);
         if ($fk_type) {
             my @list = $fk_type->find_all();
-            $form->{$column_name} = $list[0]->get_primary_key_value;
+            $form->{$req_var_prefix . $column_name} = $list[0]->get_primary_key_value;
         }
         elsif ($column_info{$column_name} =~ /file/i) {
                 my $file = Mojo::Asset::File->new->add_chunk('lalala'); 
-                $form->{$column_name}={file=>$file, filename=>'x'};
+                $form->{$req_var_prefix . $column_name}={file=>$file, filename=>'x'};
                 } elsif ( ($column_info{$column_name} =~ /^time.*/i  ) ||  ($column_info{$column_name} =~ /^date.*/i) ){
         
             my $db_parser = DateTime::Format::DBI->new( $object->get_database_handle() );
                     my $dt = DateTime->now();
-                    $random_string = $db_parser->format_datetime($dt);                     $form->{$column_name} = $random_string;
+                    $random_string = $db_parser->format_datetime($dt);                     $form->{$req_var_prefix . $column_name} = $random_string;
         }                else {
              $random_string =  int(rand(10000)) ;
-            $form->{$column_name} = $random_string;
+            $form->{$req_var_prefix . $column_name} = $random_string;
         }
 
     }

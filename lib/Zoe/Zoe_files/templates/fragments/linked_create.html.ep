@@ -2,6 +2,12 @@
 
 %   my $linked_object_short_name = $linked_object->get_object_type;
 %   $linked_object_short_name  =~ s/.*\:\:(\w+)$/$1/gmx;
+
+
+
+% my $req_var_prefix = $linked_object->get_object_type;
+%    $req_var_prefix =~ s/\:\:/_/gmx;
+%    $req_var_prefix .= '.';  
            <div>
               
               <button type="button" class="btn btn-link"
@@ -22,10 +28,15 @@
               <%== get_inputs_for_dataobject( object=>$linked_object, resolve_relationships => 1,  prettyfy => 1,
                       exclude=>[$object->get_object_type],  ); %>
                       
-%   my $to_string_name = $linked_object->get_to_string_member() || '0';
+%   my $to_string_name = $linked_object->get_to_string_member();
+
+% $to_string_name = '0' unless ($to_string_name);
+%= $to_string_name
+
               <button type="button" class="btn btn-default"
                   onclick="add_to_request_param(  '<%=$column_name%>', 'ADD_<%= $member_name%>_', 
-                                                  '<%=$member_name%>', '<%= $to_string_name%>', <%= $add_single %> 
+                                                  '<%=$member_name%>', '<%= $to_string_name%>', <%= $add_single %>, 
+                                                  '<%= $req_var_prefix %>'
                                                   )">
                   Add <%= $linked_object_short_name %>
                </button>

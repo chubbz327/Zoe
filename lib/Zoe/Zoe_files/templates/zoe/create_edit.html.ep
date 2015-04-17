@@ -90,6 +90,10 @@
 %   my $linked_object = $linked_create{$member_name}->new();
 %   my $linked_object_short_name = $linked_object->get_object_type;
 %   $linked_object_short_name  =~ s/.*\:\:(\w+)$/$1/gmx;
+
+% my $req_var_prefix = $linked_object->get_object_type;
+%    $req_var_prefix =~ s/\:\:/_/gmx;
+%    $req_var_prefix .= '.';  
 	       <div>
 		      <button type="button" class="btn btn-link"
 			     id="new_<%=$linked_object_short_name%>_button"
@@ -109,7 +113,8 @@
 %   my $to_string_name = $linked_object->get_to_string_member() || '0';
 		      <button type="button" class="btn btn-default"
 		          onclick="add_to_request_param(  '<%=$member_name%>', 'ADD_<%= $linked_object_short_name%>_', 
-		                                          '<%=$linked_object_short_name%>', '<%= $to_string_name%>' 
+		                                          '<%=$linked_object_short_name%>', '<%= $to_string_name%>', 0 ,
+		                                          '<%= $req_var_prefix %>'
 		                                          )">
 		          Add <%= $linked_object_short_name %>
 		       </button>
