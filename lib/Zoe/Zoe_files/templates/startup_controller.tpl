@@ -431,6 +431,9 @@ $r->any('/__NOTAUTHORIZED__')->name("__NOTAUTHORIZED__")->to(
                 my $template = $portal_search->{template};
 
                 my $route_name = $portal_search->{route_name};
+                my $stash = $portal_search->{stash};
+                    my %stash = ();
+                    %stash = %{$stash} if ($stash);
                 $r->$method($path)->name($route_name)->to(
                                                        namespace => $controller,
                                                        action    => $action,
@@ -438,6 +441,7 @@ $r->any('/__NOTAUTHORIZED__')->name("__NOTAUTHORIZED__")->to(
                                                        page     => $route_name,
                                                        layout   => $layout,
                                                        template => $template,
+                                                       %stash
                 );
 
                 if ( $portal->{authentication} )

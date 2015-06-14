@@ -8,8 +8,8 @@
 % my $req_var_prefix = $linked_object->get_object_type;
 %    $req_var_prefix =~ s/\:\:/_/gmx;
 %    $req_var_prefix .= '.';  
-           <div>
-              
+           <div class="form-groupcol-sm-offset-4 ">
+              <label class=" control-label" >
               <button type="button" class="btn btn-link"
                  id="new_<%=$member_name%>_button"
                  onclick="toggle_add('#new_<%=$member_name%>', 
@@ -18,11 +18,15 @@
                                      )">
                   New <%= $member_name %> 
               </button>
+              </label>
+               
               
-              
-              
+                <div id='previously_added_<%=$member_name%>' > </div>
            </div>
-           <div id='previously_added_<%=$member_name%>'> </div>
+            
+         
+          
+       
            
            <div class='well' id="new_<%=$member_name%>" style='display:none;'>
               <%== get_inputs_for_dataobject( object=>$linked_object, resolve_relationships => 1,  prettyfy => 1,

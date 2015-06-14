@@ -15,7 +15,8 @@ use Pod::Simple::Search;
 BEGIN { unshift @INC, "$FindBin::Bin/../" }
 use Data::GUID;
 use Path::Class;
-use TryCatch;
+
+
 my $layout = 'zoe';
 
 sub save_all_models
@@ -396,7 +397,7 @@ sub update
 
             
         }
-        try
+       eval
         {
 
             $update_object = $self->auth_update( $object, $current_password );
@@ -410,9 +411,8 @@ sub update
             $object->save;
             
 
-        }
-        catch
-        {
+        };
+        if ($@){
 
             #bad current password_hash
             my $redirect_to = $type;
@@ -429,7 +429,7 @@ sub update
                    json => { success => 0, message => 'Bad current password' } )
               if $self->req->is_xhr;
             $self->redirect_to($url);
-        };
+        }
 
     } else
     {
@@ -795,7 +795,7 @@ sub search
                                where   => $where
     );
     
-    $self->_run_pre_render_handlers(allt=>@all);
+    $self->_run_pre_render_handlers(all=>@all);
 
     return @all if ( $args{return_all} );
 
@@ -906,7 +906,7 @@ sub _get_upload
     my $column = shift;
 
     my $uploaded_file = $self->param($column);
-    return 0 unless ( $uploaded_file->size );
+    return 0 unless ($uploaded_file &&  $uploaded_file->size );
     my $filename      = $uploaded_file->filename;
     my $random_string = Data::GUID->new()->as_string;
 

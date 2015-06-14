@@ -366,6 +366,8 @@ sub _get_inputs_for_dataobject
 
         # skip column names that are in @ignore array
         next if any { $column_name eq $_ } @ignore;
+        my $display = $object->get_column_display($column_name) || '';
+        next if ($display =~ /none/i);
         my $column_type = $column_info{$column_name};
         my $method_name = 'get_' . $column_name;
         my $input_class = $self->_get_class_for_input( $object, $column_name );
