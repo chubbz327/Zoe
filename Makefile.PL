@@ -40,6 +40,7 @@ WriteMakefile(
   'Term::ReadLine::Perl' => '0',
   'File::NCopy' => 0,
   'TryCatch' => 0,
+  'DateTime::Format::SQLite'  => 0,
   
  },
  EXE_FILES => [qw( script/zoe-generator )],
